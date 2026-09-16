@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: webstore
+
+  datasource:
+    url : jdbc:mariadb://localhost:3306/webstore
+    username: webstore_app
+    password: ToinenSalasana456!
+
+  jpa:
+    hibernate:
+      ddl_auto: validate
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+
+
