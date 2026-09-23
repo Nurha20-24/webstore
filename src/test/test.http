@@ -1,0 +1,25 @@
+GET http://localhost:8080/api/products
+Accept: application/json
+
+###
+GET http://localhost:8080/api/products/8
+Accept: application/json
+
+
+### Hae kaikki kategoriat
+GET http://localhost:8080/api/categories
+Accept: application/json
+
+
+###
+GET http://localhost:8080/api/categories/22
+Accept: application/json
+
+### Luo uusi kategoria
+POST http://localhost:8080/api/categories
+Content-Type: application/json
+
+{
+  "name": "Testikategoria",
+  "description": "Testausta varten"
+}
