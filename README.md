@@ -1,21 +1,15 @@
-# Tietokanta projekti
+# Webstore Project 
 
 
-### API-spesifikaatio
-
-#### ProductCategories
-GET    /api/categories        - Listaa kaikki tuotekategoriat
-GET    /api/categories/{id}   - Hakee yhden kategorian id:n perusteella
-POST   /api/categories        - Luo uuden kategorian (nimi + kuvaus)
-PUT    /api/categories/{id}   - Päivittää olemassa olevan kategorian
-DELETE /api/categories/{id}   - Poistaa kategorian
-
-#### Products
-GET    /api/products          - Listaa tuotteet
-GET    /api/products/{id}     - Hakee yhden tuotteen tiedot
-POST   /api/products          - Lisää uuden tuotteen
-
-#### Customers
-GET    /api/customers         - Listaa asiakkaat
-POST   /api/orders            - Luo uuden tilauksen
-GET    /api/orders/{id}       - Hakee tilauksen tiedot 
+### API Endpoints
+| Method | URL | Description |
+|---|---|---|
+| GET | /api/categories | Get all categories |
+| GET | /api/categories/{id} | Get category with its products |
+| POST | /api/categories | Create new category |
+| DELETE | /api/categories/{id} | Delete category (cascades to products) |
+| GET | /api/products | Get all products |
+| GET | /api/products/{id} | Get single product |
+| POST | /api/products | Create new product |
+| PUT | /api/products/{id} | Update product |
+| DELETE | /api/products/{id} | Delete product |
