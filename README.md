@@ -2,6 +2,7 @@
 
 
 ### API Endpoints
+
 | Method | URL | Description |
 |---|---|---|
 | GET | /api/categories | Get all categories |

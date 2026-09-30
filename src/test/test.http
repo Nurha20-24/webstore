@@ -23,3 +23,27 @@ Content-Type: application/json
   "name": "Testikategoria",
   "description": "Testausta varten"
 }
+
+### 1. N:M — hae tilaus tilausriveineen
+GET http://localhost:8080/api/orders/1
+
+### 2. N:M — hae kaikki tilaukset
+GET http://localhost:8080/api/orders
+
+### 3. 1:1 — hae asiakas osoitteineen
+GET http://localhost:8080/api/customers/1
+
+### 4. Periytyminen — luo yritysasiakas
+POST http://localhost:8080/api/customers/company
+Content-Type: application/json
+
+{
+  "firstName": "Matti",
+  "lastName": "Meikäläinen",
+  "email": "matti@firma.fi",
+  "companyName": "Firma Oy",
+  "businessId": "1234567-8"
+}
+
+### 5. Varmista että yritysasiakas tallentui oikein
+GET http://localhost:8080/api/customers/100001
