@@ -45,5 +45,27 @@ Content-Type: application/json
   "businessId": "1234567-8"
 }
 
-### 5. Varmista että yritysasiakas tallentui oikein
+### 5. Varmistus että yritysasiakas tallentui oikein
 GET http://localhost:8080/api/customers/100001
+
+
+### Criteria API: hae tuotteet hintahaarukalla
+GET http://localhost:8080/api/products/search?minPrice=10&maxPrice=50
+
+### Criteria API: hae tuotteet kategorialla ja hintahaarukalla
+GET http://localhost:8080/api/products/search?minPrice=10&maxPrice=100&categoryId=1
+
+### Criteria API: hae vain kategorian tuotteet
+GET http://localhost:8080/api/products/search?categoryId=2
+
+### JPQL massapäivitys: nosta kategorian 1 hintoja 10%
+PUT http://localhost:8080/api/products/price-update?categoryId=1&multiplier=1.1
+
+### Sivutettu haku — nopea, palauttaa 20 tilausta
+GET http://localhost:8080/api/orders?page=0&size=20
+
+### Seuraava sivu
+GET http://localhost:8080/api/orders?page=1&size=20
+
+### Kaikki tilaukset JOIN FETCHillä
+GET http://localhost:8080/api/orders/with-customers

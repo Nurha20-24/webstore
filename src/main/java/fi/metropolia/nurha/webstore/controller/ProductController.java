@@ -3,9 +3,12 @@ package fi.metropolia.nurha.webstore.controller;
 
 import fi.metropolia.nurha.webstore.entity.Product;
 import fi.metropolia.nurha.webstore.repository.ProductRepository;
+import fi.metropolia.nurha.webstore.service.ProductService;
+import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -14,9 +17,11 @@ public class ProductController {
 
     private final ProductRepository productRepository;
 
+    private final ProductService productService;
 
-    public ProductController(ProductRepository productRepository) {
+    public ProductController(ProductRepository productRepository, ProductService productService) {
         this.productRepository = productRepository;
+        this.productService = productService;
     }
 
     // GET /api/products
@@ -58,6 +63,28 @@ public class ProductController {
         }
         productRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Criteria API: dynaaminen haku
+    // Kaikki parametrit ovat valinnaisia
+    // GET /api/products/search?minPrice=10&maxPrice=100&categoryId=1
+    @GetMapping("/search")
+    public List<Product> search(
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Integer categoryId) {
+        return productService.searchProducts(minPrice, maxPrice, categoryId);
+    }
+
+    // JPQL: massapäivitys - nosta kaikkien kategorian tuotteiden hintaa
+    // PUT /api/products/price-update?categoryId=1&multiplier=1.1
+    @PutMapping("/price-update")
+    @Transactional
+    public ResponseEntity<String> updatePrices(
+            @RequestParam Integer categoryId,
+            @RequestParam BigDecimal multiplier) {
+        int updated = productRepository.updatePricesByCategory(multiplier, categoryId);
+        return ResponseEntity.ok("Updated " + updated + " products");
     }
 
 }
