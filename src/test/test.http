@@ -110,3 +110,21 @@ GET http://localhost:8080/api/products/3
 
 ### Optimistinen lukitus: osto-operaatio
 PUT http://localhost:8080/api/products/1/purchase?quantity=3
+
+
+### Hae toimittaja osoitteineen ja tuotteineen
+GET http://localhost:8080/api/suppliers/1
+
+### Hae kaikki toimittajat
+GET http://localhost:8080/api/suppliers
+
+### Luo uusi toimittaja
+POST http://localhost:8080/api/suppliers
+Content-Type: application/json
+
+{
+  "name": "Testi Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-1234567",
+  "email": "matti@testitukku.fi"
+}

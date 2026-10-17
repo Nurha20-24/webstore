@@ -44,5 +44,9 @@ public class Product {
     @JsonBackReference
     private ProductCategory category;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "supplier_id")
+    @JsonBackReference("supplier-products")
+    private Supplier supplier;
 }
 
