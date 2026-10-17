@@ -41,9 +41,10 @@ public class Customer {
     @JsonManagedReference("customer-address")
     private CustomerAddress address;
 
+
     // 1:M - yhdellä asiakkaalla voi olla useita tilauksia
     @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
-    @JsonBackReference("customer-orders")
+    @JsonManagedReference("customer-orders")
     private List<Order> orders;
 
 }

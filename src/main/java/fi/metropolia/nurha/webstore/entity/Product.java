@@ -1,6 +1,6 @@
 package fi.metropolia.nurha.webstore.entity;
 
-
+import jakarta.persistence.Version;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+
 
 @Entity
 @Table(name= "Products")
@@ -31,6 +32,12 @@ public class Product {
 
     @Column(name="stock_quantity", nullable = false)
     private Integer stockQuantity;
+
+    // @Version lisää versionumeron tietokantaan, Jos versio on muuttunut, JPA heittää OptimisticLockException
+    // Tämä mahdollistaa optimistisen lukituksen, joka estää samanaikaiset päivitykset
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")

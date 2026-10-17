@@ -87,4 +87,36 @@ public class ProductController {
         return ResponseEntity.ok("Updated " + updated + " products");
     }
 
+    // Osto-operaatio: vähennä varastosaldoa, Optimistinen lukitus estää yliostamisen
+    @PutMapping("/{id}/purchase")
+    public ResponseEntity<String> purchase(
+            @PathVariable Integer id,
+            @RequestParam Integer quantity) {
+        try {
+            return productRepository.findById(id)
+                    .map(product -> {
+                        if (product.getStockQuantity() < quantity) {
+                            return ResponseEntity.badRequest()
+                                    .body("Not enough stock. Available: "
+                                            + product.getStockQuantity());
+                        }
+                        // Vähennetään varastoa
+                        // Jos toinen transaktio on muuttanut tätä tuotetta
+                        // samanaikaisesti → OptimisticLockException
+                        product.setStockQuantity(
+                                product.getStockQuantity() - quantity);
+                        productRepository.save(product);
+                        return ResponseEntity.ok(
+                                "Purchase successful. New stock: "
+                                        + product.getStockQuantity());
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+
+        } catch (Exception e) {
+            // OptimisticLockException: toinen transaktio muutti dataa samanaikaisesti
+            return ResponseEntity.status(409)
+                    .body("Concurrent update detected. Please try again.");
+        }
+    }
+
 }

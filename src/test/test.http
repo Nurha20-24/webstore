@@ -69,3 +69,44 @@ GET http://localhost:8080/api/orders?page=1&size=20
 
 ### Kaikki tilaukset JOIN FETCHillä
 GET http://localhost:8080/api/orders/with-customers
+
+
+
+### Muunnin: luo tilaus pienillä kirjaimilla, tallentuu isolla kirjaimella
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "status": "new",
+  "customer": { "id": 1 }
+}
+
+
+### Tapahtumat: luo tilaus ilman orderDatea. OrderDate pitäisi asettua automaattisesti @PrePersist:issä
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "customer": { "id": 1 }
+}
+
+
+### Tarkista versio ennen
+GET http://localhost:8080/api/products/3
+
+### Päivitä tuote
+PUT http://localhost:8080/api/products/3
+Content-Type: application/json
+
+{
+  "name": "Updated Product",
+  "price": 99.99,
+  "stockQuantity": 50
+}
+
+### Tarkista versio jälkeen — version pitäisi kasvaa
+GET http://localhost:8080/api/products/3
+
+
+### Optimistinen lukitus: osto-operaatio
+PUT http://localhost:8080/api/products/1/purchase?quantity=3
