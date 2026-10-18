@@ -300,7 +300,6 @@ Tässä osiossa kuvataan JPA-entiteettien väliset suhteet
 ja niiden toteutusratkaisut.
 
 **1:M — ProductCategory ja Product**
-
 Yhdellä kategorialla voi olla monta tuotetta. Kategoriapää
 käyttää LAZY-latausta koska tuotelistaa ei tarvita joka
 haussa. Tuotepää käyttää EAGER-latausta koska kategorian
@@ -308,14 +307,12 @@ nimi halutaan lähes aina tuotteen yhteydessä. CascadeType.ALL
 tarkoittaa että kategorian poisto poistaa myös sen tuotteet.
 
 **1:1 — Customer ja CustomerAddress**
-
 Asiakkaalla on yksi toimitusosoite. CustomerAddress omistaa
 suhteen koska vierasavain customer_id on sen taulussa.
 Asiakas käyttää EAGER-latausta koska osoite tarvitaan
 lähes aina asiakkaan yhteydessä.
 
 **N:M — Order ja Product (OrderItems-väliitaulu)**
-
 Tilaus voi sisältää monta tuotetta ja tuote voi esiintyä
 monessa tilauksessa. Koska OrderItems-taulussa on lisäkenttiä
 (quantity, unit_price), tavallinen @ManyToMany ei riitä.
@@ -323,7 +320,6 @@ Toteutettiin erillinen OrderItem-entiteetti väliitaululle
 ja @EmbeddedId yhdistelmäavaimen mallintamiseen.
 
 **Periytyminen — Customer ja CompanyCustomer**
-
 Yritysasiakas perii Customer-luokan ja lisää kentät
 companyName ja businessId. Strategiana InheritanceType.SINGLE_TABLE
 koska lisäkenttiä on vain kaksi — NULL-arvoja syntyy vähän
@@ -331,7 +327,6 @@ eikä JOIN-operaatioita tarvita. Discriminator-sarake
 customer_type erottaa henkilö- ja yritysasiakkaat.
 
 **N+1-ongelma ja ratkaisu**
-
 Havaittiin N+1-ongelma GET /api/orders -kutsussa. 
 Ratkaistiin kahdella tavalla:
 sivutuksella joka rajoittaa palautettavan datan määrää,
