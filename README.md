@@ -401,7 +401,9 @@ Onnistuneet poisto-operaatiot palauttavat 204 (ei sisältöä).
 | PUT | /api/products/price-update | Massapäivitys kategorian hinnoille |
 | DELETE | /api/products/{id} | Poista tuote |
 
-**GET /api/products**
+---
+
+**GET `/api/products`**
 
 Palauttaa kaikki tuotteet listana.
 
@@ -419,7 +421,7 @@ Esimerkkivastaus (200 OK):
 ]
 ```
 
-**GET /api/products/{id}**
+**GET `/api/products/{id}`**
 
 Palauttaa yksittäisen tuotteen tiedot ID:n perusteella.
 
@@ -437,7 +439,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**GET /api/products/search**
+**GET `/api/products/search`**
 
 Dynaaminen tuotehaku Criteria API:lla. Kaikki parametrit ovat
 valinnaisia — voidaan antaa yksi, kaksi tai kaikki kolme.
@@ -447,11 +449,7 @@ Parametrit:
 - maxPrice (desimaaliluku, valinnainen)
 - categoryId (kokonaisluku, valinnainen)
 
-Esimerkkikutsut:
-GET /api/products/search?minPrice=10&maxPrice=50
-GET /api/products/search?categoryId=1
-GET /api/products/search?minPrice=10&maxPrice=100&categoryId=1
-
+Esimerkkikutsut: GET `/api/products/search?minPrice=10&maxPrice=50`
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -467,7 +465,7 @@ Esimerkkivastaus (200 OK):
 ]
 ```
 
-**POST /api/products**
+**POST `/api/products`**
 
 Luo uuden tuotteen.
 
@@ -481,7 +479,7 @@ Esimerkkipyyntö:
 }
 ```
 
-**PUT /api/products/{id}**
+**PUT `/api/products/{id}`**
 
 Päivittää tuotteen tiedot. Optimistinen lukitus (@Version) kasvattaa
 versionumeroa automaattisesti jokaisen päivityksen yhteydessä.
@@ -509,7 +507,7 @@ Esimerkkivastaus (200 OK) — (version kasvu 1):
 }
 ```
 
-**PUT /api/products/{id}/purchase**
+**PUT `/api/products/{id}/purchase`**
 
 Vähentää tuotteen varastosaldoa. Käyttää optimistista lukitusta
 estämään yliostamisen samanaikaisissa ostoissa. Jos varasto ei
@@ -520,14 +518,14 @@ Parametrit:
 - id (kokonaisluku, pakollinen)
 - quantity (kokonaisluku, pakollinen, query-parametri)
 
-Esimerkki: PUT /api/products/1/purchase?quantity=5
+Esimerkki: PUT `/api/products/1/purchase?quantity=5`
 
 Esimerkkivastaus (200 OK):
 
     Purchase successful. New stock: 42
 
 
-**PUT /api/products/price-update**
+**PUT `/api/products/price-update`**
 
 JPQL-massapäivitys joka nostaa kaikkien tietyn kategorian
 tuotteiden hintaa kertoimella. Yksi SQL-lause päivittää
@@ -537,12 +535,11 @@ Parametrit:
 - categoryId (kokonaisluku, pakollinen)
 - multiplier (desimaaliluku, pakollinen, esim. 1.1 = +10%)
 
-Esimerkki: PUT /api/products/price-update?categoryId=1&multiplier=1.1
+Esimerkki: PUT `/api/products/price-update?categoryId=1&multiplier=1.1`
 
 Esimerkkivastaus (200 OK):
 
     Updated 98 products
-
 
 ---
 
@@ -555,7 +552,9 @@ Esimerkkivastaus (200 OK):
 | POST | /api/categories | Luo uusi kategoria |
 | DELETE | /api/categories/{id} | Poista kategoria ja sen tuotteet |
 
-**GET /api/categories**
+---
+
+**GET `/api/categories`**
 
 Palauttaa kaikki kategoriat ja niihin kuuluvat tuotteet.
 Hyödyntää 1:M-assosiaatiota ProductCategory -> Product.
@@ -580,7 +579,7 @@ Esimerkkivastaus (200 OK):
 ]
 ```
 
-**GET /api/categories/{id}**
+**GET `/api/categories/{id}`**
 
 Palauttaa yksittäisen kategorian ja siihen kuuluvat tuotteet.
 
@@ -596,7 +595,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**POST /api/categories**
+**POST `/api/categories`**
 
 Luo uuden kategorian.
 
@@ -618,7 +617,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**DELETE /api/categories/{id}**
+**DELETE `/api/categories/{id}`**
 
 Poistaa kategorian. CascadeType.ALL poistaa automaattisesti
 myös kaikki kategorian tuotteet. Todennettu: kategoria id 28
@@ -641,17 +640,11 @@ Esimerkkivastaus (Onnistunut poisto):
 | POST | /api/customers | Luo henkilöasiakas |
 | POST | /api/customers/company | Luo yritysasiakas |
 
-**GET /api/customers**
+---
+
+**GET `/api/customers`**
 
 Palauttaa kaikki asiakkaat osoitteineen ja tilauksineen.
-
-
-**GET /api/customers/{id}**
-
-Palauttaa asiakkaan tiedot, toimitusosoitteen (1:1-assosiaatio)
-ja tilaushistorian tilausriveineen.
-
-Parametrit: id (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -690,7 +683,56 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**POST /api/customers**
+**GET `/api/customers/{id}`**
+
+Palauttaa asiakkaan tiedot, toimitusosoitteen (1:1-assosiaatio)
+ja tilaushistorian tilausriveineen.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "address": {
+    "city": "New Jonathanmouth",
+    "country": "Azerbaijan",
+    "id": 6,
+    "postalCode": "78800",
+    "streetAddress": "7235 Frederick Neck"
+  },
+  "email": "hughesthomas6@example.com",
+  "first_name": "Christian",
+  "id": 6,
+  "last_name": "Meyer",
+  "orders": [
+    {
+      "deliveryDate": "2025-03-14T09:51:07",
+      "id": 80897,
+      "orderDate": "2025-03-13T07:49:41",
+      "orderItems": [
+        {
+          "product": {
+            "description": "Hit safe line hotel make body.",
+            "id": 421,
+            "name": "Super Hub 763",
+            "price": 161.44,
+            "stockQuantity": 362,
+            "version": 0
+          },
+          "quantity": 1,
+          "unitPrice": 133.42,
+          "id": {
+            "orderId": 80897,
+            "productId": 421
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**POST `/api/customers`**
 
 Luo uuden henkilöasiakkaan.
 
@@ -717,7 +759,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**POST /api/customers/company**
+**POST `/api/customers/company`**
 
 Luo yritysasiakkaan. Hyödyntää JPA-periytymistä
 (InheritanceType.SINGLE_TABLE). Yritysasiakas tallentuu
@@ -761,7 +803,9 @@ Esimerkkivastaus (200 OK):
 | GET | /api/orders/with-customers | Hae tilaukset JOIN FETCHillä sivutettuna |
 | POST | /api/orders | Luo uusi tilaus |
 
-**GET /api/orders**
+---
+
+**GET `/api/orders`**
 
 Palauttaa tilaukset sivutettuna. Sivutus on tärkeä koska
 tietokannassa on 200 000+ tilausta. 
@@ -770,7 +814,7 @@ Parametrit:
 - page (kokonaisluku, oletusarvo 0)
 - size (kokonaisluku, oletusarvo 20)
 
-Esimerkki: GET /api/orders?page=0&size=20
+Esimerkki: GET `/api/orders?page=0&size=20`
 
 Esimerkkivastaus (200 OK) — sisältää sivutusmetatiedot:
 ```json
@@ -804,7 +848,7 @@ Esimerkkivastaus (200 OK) — sisältää sivutusmetatiedot:
 }
 ```
 
-**GET /api/orders/{id}**
+**GET `/api/orders/{id}`**
 
 Palauttaa yksittäisen tilauksen asiakastietoineen ja
 tilausriveineen. Hyödyntää N:M-assosiaatiota
@@ -835,7 +879,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**POST /api/orders**
+**POST `/api/orders`**
 
 Luo uuden tilauksen. Kaksi automaattista toimintoa:
 
@@ -894,7 +938,9 @@ Esimerkkivastaus — muunnin muutti status isoiksi kirjaimiksi:
 | PUT | /api/suppliers/{id} | Päivitä toimittajan tiedot |
 | DELETE | /api/suppliers/{id} | Poista toimittaja |
 
-**GET /api/suppliers**
+---
+
+**GET `/api/suppliers`**
 
 Palauttaa kaikki toimittajat osoitteineen ja tuotteineen.
 
@@ -930,7 +976,7 @@ Esimerkkivastaus (200 OK):
 
 ```
 
-**GET /api/suppliers/{id}**
+**GET `/api/suppliers/{id}`**
 
 Palauttaa yksittäisen toimittajan yhteystiedot,
 osoitteet ja toimittajan tuotteet.
@@ -967,7 +1013,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**POST /api/suppliers**
+**POST `/api/suppliers`**
 
 Luo uuden toimittajan.
 
@@ -994,7 +1040,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**PUT /api/suppliers/{id}**
+**PUT `/api/suppliers/{id}`**
 
 Päivittää toimittajan tiedot.
 
@@ -1023,7 +1069,7 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
-**DELETE /api/suppliers/{id}**
+**DELETE `/api/suppliers/{id}`**
 
 Poistaa toimittajan.
 
