@@ -231,3 +231,27 @@ Content-Type: application/json
 
 ### Poista toimittaja
 DELETE http://localhost:8080/api/suppliers/103
+
+
+
+
+
+### Hae kaikki kontaktit
+GET http://localhost:8080/api/contacts
+
+### Hae kontakti ID:llä
+GET http://localhost:8080/api/contacts/13
+
+### Hae kontakti sähköpostilla
+GET http://localhost:8080/api/contacts/email/miguelbaird34283@example.org
+
+### Luo uusi kontakti — reference generoidaan automaattisesti
+POST http://localhost:8080/api/contacts
+Content-Type: application/json
+
+{
+  "email": "uusi@example.fi"
+}
+
+### Poista kontakti
+DELETE http://localhost:8080/api/contacts/112

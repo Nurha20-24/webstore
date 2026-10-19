@@ -524,7 +524,6 @@ Esimerkkivastaus (200 OK):
 
     Purchase successful. New stock: 42
 
-
 **PUT `/api/products/price-update`**
 
 JPQL-massapäivitys joka nostaa kaikkien tietyn kategorian
@@ -541,6 +540,16 @@ Esimerkkivastaus (200 OK):
 
     Updated 98 products
 
+**DELETE `/api/products/{id}`**
+
+Poistaa tuotteen ID:n perusteella.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus: (Onnistunut poisto)
+
+    HTTP/1.1 204 No Content
+
 ---
 
 ### Kategoriat — /api/categories
@@ -549,6 +558,7 @@ Esimerkkivastaus (200 OK):
 |--------|------------|--------|
 | GET | /api/categories | Hae kaikki kategoriat tuotteineen |
 | GET | /api/categories/{id} | Hae kategoria ID:llä |
+| PUT | /api/categories/{id} | Päivitä kategorian tiedot |
 | POST | /api/categories | Luo uusi kategoria |
 | DELETE | /api/categories/{id} | Poista kategoria ja sen tuotteet |
 
@@ -617,6 +627,30 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
+**PUT `/api/categories/{id}`**
+
+Päivittää kategorian nimen ja kuvauksen.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Päivitetty kategoria",
+  "description": "Päivitetty kuvaus"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 22,
+  "name": "Päivitetty kategoria",
+  "description": "Päivitetty kuvaus",
+  "products": []
+}
+```
+
 **DELETE `/api/categories/{id}`**
 
 Poistaa kategorian. CascadeType.ALL poistaa automaattisesti
@@ -625,7 +659,7 @@ poistettiin (204), ja sen jälkeen GET palautti 404.
 
 Parametrit: id (kokonaisluku, pakollinen)
 
-Esimerkkivastaus (Onnistunut poisto):
+Esimerkkivastaus: (Onnistunut poisto)
 
     HTTP/1.1 204 No Content
 
@@ -802,6 +836,9 @@ Esimerkkivastaus (200 OK):
 | GET | /api/orders/{id} | Hae tilaus tilausriveineen |
 | GET | /api/orders/with-customers | Hae tilaukset JOIN FETCHillä sivutettuna |
 | POST | /api/orders | Luo uusi tilaus |
+| PUT | /api/orders/{id} | Päivitä tilauksen status ja toimituspäivä |
+| DELETE | /api/orders/{id} | Poista tilaus ja sen tilausrivit |
+
 
 ---
 
@@ -908,23 +945,61 @@ status oletuksena "NEW":
 }
 ```
 
-Esimerkkipyyntö status pienillä kirjaimilla:
+**PUT `/api/orders/{id}`**
+
+Päivittää tilauksen statuksen ja/tai toimituspäivän.
+OrderStatusConverter muuntaa statuksen automaattisesti
+isoille kirjaimille.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkipyyntö — päivitä vain status:
 ```json
 {
-  "status": "new",
-  "customer": { "id": 1 }
+  "status": "cancelled"
 }
 ```
 
-Esimerkkivastaus — muunnin muutti status isoiksi kirjaimiksi:
+Esimerkkivastaus (200 OK):
 ```json
 {
-  "id": 200045,
-  "orderDate": "2026-10-18T11:38:49.318364",
-  "status": "NEW",
-  "orderItems": null
+  "id": 200043,
+  "orderDate": "2026-10-17T10:27:33",
+  "deliveryDate": null,
+  "status": "CANCELLED",
+  "orderItems": []
 }
 ```
+
+Esimerkkipyyntö — päivitä status ja toimituspäivä:
+```json
+{
+  "status": "delivered",
+  "deliveryDate": "2026-10-20T12:00:00"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 200042,
+  "orderDate": "2026-10-17T01:38:24",
+  "deliveryDate": "2026-10-20T12:00:00",
+  "status": "DELIVERED",
+  "orderItems": []
+}
+```
+
+**DELETE `/api/orders/{id}`**
+
+Poistaa tilauksen. CascadeType.ALL poistaa automaattisesti
+myös kaikki tilauksen tilausrivit.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus: (Onnistunut poisto)
+
+    HTTP/1.1 204 No Content
 
 ---
 
@@ -1076,5 +1151,107 @@ Poistaa toimittajan.
 Parametrit: id (kokonaisluku, pakollinen)
 
 Esimerkkivastaus: (Onnistunut poisto)
+
+    HTTP/1.1 204 No Content
+
+---
+
+### Kontaktit — `/api/contacts`
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | `/api/contacts` | Hae kaikki kontaktit |
+| GET | `/api/contacts/{id}` | Hae kontakti ID:n perusteella |
+| GET | `/api/contacts/email/{email}` | Hae kontaktit sähköpostiosoitteen perusteella |
+| POST | `/api/contacts` | Luo uusi kontakti |
+| DELETE | `/api/contacts/{id}` | Poista kontakti |
+
+---
+
+**GET `/api/contacts`**
+
+Palauttaa kaikki kontaktit.
+
+Esimerkkivastaus (200 OK):
+
+```json
+[
+  {
+    "email": "hwilliams5002@example.org",
+    "id": 1,
+    "reference": "316e8f76f94b5b1dd8372d78fe7f67ea"
+  }
+]
+```
+
+**GET `/api/contacts/{id}`**
+
+Palauttaa yksittäisen kontaktin ID:n perusteella.
+
+Parametrit: `id` (kokonaisluku, pakollinen)
+
+
+Esimerkkivastaus (200 OK):
+
+```json
+{
+  "email": "brian7396735@example.com",
+  "id": 13,
+  "reference": "1b18fabd7a95c4d99d4ca5c6d1ddfb62"
+}
+```
+
+**GET `/api/contacts/email/{email}`**
+
+Palauttaa kaikki kontaktit, jotka vastaavat annettua sähköpostiosoitetta. Samalla sähköpostiosoitteella voi olla useita kontakteja.
+
+Parametrit: `email` (sähköpostiosoite, pakollinen)
+
+Esimerkkivastaus (200 OK):
+
+```json
+[
+  {
+    "email": "miguelbaird34283@example.org",
+    "id": 11,
+    "reference": "6820e161785052a6ce990bf66fb5b681"
+  },
+  {
+    "email": "miguelbaird34283@example.org",
+    "id": 6159,
+    "reference": "19fdceb2c4838078d060beb33cf82bf6"
+  }
+]
+```
+
+**POST `/api/contacts`**
+
+Luo uuden kontaktin. `reference` generoidaan automaattisesti.
+
+Esimerkkipyyntö:
+
+```json
+{
+  "email": "uusi@example.fi"
+}
+```
+
+Esimerkkivastaus (200 OK):
+
+```json
+{
+  "email": "uusi@example.fi",
+  "id": 500002,
+  "reference": "fe4e3fd104704ab1a7b73ef1c0a13047"
+}
+```
+
+**DELETE `/api/contacts/{id}`**
+
+Poistaa kontaktin ID:n perusteella.
+
+Parametrit: `id` (kokonaisluku, pakollinen)
+
+Esimerkkivastaus:
 
     HTTP/1.1 204 No Content
