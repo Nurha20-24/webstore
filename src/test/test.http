@@ -1,9 +1,51 @@
+### Hae kaikki tuotteet
 GET http://localhost:8080/api/products
 Accept: application/json
 
-###
+### Hae yksittäinen tuote
 GET http://localhost:8080/api/products/8
 Accept: application/json
+
+### Luo uusi tuote
+POST http://localhost:8080/api/products
+Content-Type: application/json
+
+{
+  "name": "Uusi tuote",
+  "description": "Kuvaus",
+  "price": 29.99,
+  "stockQuantity": 100
+}
+
+### Tarkista versio ennen
+GET http://localhost:8080/api/products/4
+
+### Päivitä tuote
+PUT http://localhost:8080/api/products/4
+Content-Type: application/json
+
+{
+  "name": "Updated Product",
+  "price": 99.99,
+  "stockQuantity": 50
+}
+
+### Tarkista versio jälkeen — version pitäisi kasvaa
+GET http://localhost:8080/api/products/3
+
+
+### Optimistinen lukitus: osto-operaatio
+PUT http://localhost:8080/api/products/1/purchase?quantity=5
+
+
+### Poista tuote
+DELETE http://localhost:8080/api/products/1003
+
+
+
+
+
+
 
 
 ### Hae kaikki kategoriat
@@ -11,7 +53,7 @@ GET http://localhost:8080/api/categories
 Accept: application/json
 
 
-###
+### Hae yksittäinen kategoria
 GET http://localhost:8080/api/categories/22
 Accept: application/json
 
@@ -24,14 +66,30 @@ Content-Type: application/json
   "description": "Testausta varten"
 }
 
-### 1. N:M — hae tilaus tilausriveineen
-GET http://localhost:8080/api/orders/1
+### Poista kategoria (cascade — pitäisi poistaa myös tuotteet)
+### VAROITUS: käytä testikategoriaa, älä oikeaa!
+DELETE http://localhost:8080/api/categories/28
 
-### 2. N:M — hae kaikki tilaukset
-GET http://localhost:8080/api/orders
+### Tarkista että kategoria ja sen tuotteet poistuivat
+GET http://localhost:8080/api/categories/28
+
+### Päivitä kategoria
+PUT http://localhost:8080/api/categories/22
+Content-Type: application/json
+
+{
+  "name": "Päivitetty kategoria",
+  "description": "Päivitetty kuvaus"
+}
+
+
+
+
+
+
 
 ### 3. 1:1 — hae asiakas osoitteineen
-GET http://localhost:8080/api/customers/1
+GET http://localhost:8080/api/customers/6
 
 ### 4. Periytyminen — luo yritysasiakas
 POST http://localhost:8080/api/customers/company
@@ -47,6 +105,23 @@ Content-Type: application/json
 
 ### 5. Varmistus että yritysasiakas tallentui oikein
 GET http://localhost:8080/api/customers/100001
+
+### Hae kaikki asiakkaat
+GET http://localhost:8080/api/customers
+
+### Luo henkilöasiakas
+POST http://localhost:8080/api/customers
+Content-Type: application/json
+
+{
+  "first_name": "Testi",
+  "last_name": "Käyttäjä",
+  "email": "testi@example.fi",
+  "phone": "040-1111111"
+}
+
+
+
 
 
 ### Criteria API: hae tuotteet hintahaarukalla
@@ -72,6 +147,36 @@ GET http://localhost:8080/api/orders/with-customers
 
 
 
+
+
+
+### 1. N:M — hae tilaus tilausriveineen
+GET http://localhost:8080/api/orders/1
+
+### 2. N:M — hae kaikki tilaukset
+GET http://localhost:8080/api/orders
+
+
+### Päivitä tilauksen status
+PUT http://localhost:8080/api/orders/200043
+Content-Type: application/json
+
+{
+  "status": "cancelled"
+}
+
+### Päivitä tilauksen toimituspäivä
+PUT http://localhost:8080/api/orders/200042
+Content-Type: application/json
+
+{
+  "status": "delivered",
+  "deliveryDate": "2026-10-20T12:00:00"
+}
+
+### Poista tilaus (cascade poistaa myös tilausrivit)
+DELETE http://localhost:8080/api/orders/200040
+
 ### Muunnin: luo tilaus pienillä kirjaimilla, tallentuu isolla kirjaimella
 POST http://localhost:8080/api/orders
 Content-Type: application/json
@@ -91,29 +196,12 @@ Content-Type: application/json
 }
 
 
-### Tarkista versio ennen
-GET http://localhost:8080/api/products/3
-
-### Päivitä tuote
-PUT http://localhost:8080/api/products/3
-Content-Type: application/json
-
-{
-  "name": "Updated Product",
-  "price": 99.99,
-  "stockQuantity": 50
-}
-
-### Tarkista versio jälkeen — version pitäisi kasvaa
-GET http://localhost:8080/api/products/3
 
 
-### Optimistinen lukitus: osto-operaatio
-PUT http://localhost:8080/api/products/1/purchase?quantity=3
 
 
 ### Hae toimittaja osoitteineen ja tuotteineen
-GET http://localhost:8080/api/suppliers/1
+GET http://localhost:8080/api/suppliers/7
 
 ### Hae kaikki toimittajat
 GET http://localhost:8080/api/suppliers
@@ -128,3 +216,18 @@ Content-Type: application/json
   "phone": "040-1234567",
   "email": "matti@testitukku.fi"
 }
+
+
+### Päivitä toimittaja
+PUT http://localhost:8080/api/suppliers/103
+Content-Type: application/json
+
+{
+  "name": "Päivitetty Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-9999999",
+  "email": "uusi@testitukku.fi"
+}
+
+### Poista toimittaja
+DELETE http://localhost:8080/api/suppliers/103

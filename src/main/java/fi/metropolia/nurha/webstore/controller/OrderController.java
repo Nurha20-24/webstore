@@ -60,4 +60,36 @@ public class OrderController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    // PUT /api/orders/{id} — päivitä tilauksen status ja toimituspäivä
+    @PutMapping("/{id}")
+    public ResponseEntity<Order> update(
+            @PathVariable Integer id,
+            @RequestBody Order updated) {
+        return orderRepository.findById(id)
+                .map(order -> {
+                    // Päivitetään vain muutettavat kentät
+                    // status muuntuu automaattisesti isoille kirjaimille
+                    // OrderStatusConverter:in avulla
+                    if (updated.getStatus() != null) {
+                        order.setStatus(updated.getStatus());
+                    }
+                    if (updated.getDeliveryDate() != null) {
+                        order.setDeliveryDate(updated.getDeliveryDate());
+                    }
+                    return ResponseEntity.ok(orderRepository.save(order));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // DELETE /api/orders/{id} — poista tilaus
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        if (!orderRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        // CascadeType.ALL poistaa myös tilausrivit automaattisesti
+        orderRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

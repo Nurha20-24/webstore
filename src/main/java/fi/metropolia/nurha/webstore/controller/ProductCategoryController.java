@@ -34,6 +34,19 @@ public class ProductCategoryController {
         return repository.save(category);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductCategory> update(
+            @PathVariable Integer id,
+            @RequestBody ProductCategory updated) {
+        return repository.findById(id)
+                .map(category -> {
+                category.setName(updated.getName());
+                category.setDescription(updated.getDescription());
+                return ResponseEntity.ok(repository.save(category));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         if (!repository.existsById(id)) {

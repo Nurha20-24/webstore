@@ -57,10 +57,16 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    public ResponseEntity<String> delete(@PathVariable Integer id) {
         if (!productRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
+        // Tarkistetaan, onko tuotetta käytetty tilausriveillä
+        if (productRepository.countOrderItemsByProductId(id) > 0) {
+            return ResponseEntity.status(409)
+                    .body("Product cannot be deleted because it is used in orders.");
+        }
+
         productRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

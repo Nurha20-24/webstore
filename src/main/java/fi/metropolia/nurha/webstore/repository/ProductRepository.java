@@ -34,5 +34,15 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("DELETE FROM Product p WHERE p.stockQuantity = 0")
     int deleteOutOfStockProducts();
 
+
+    // Tarkista, onko tuotetta käytetty tilausriveillä
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM orderitems
+        WHERE product_id = :id
+        """, nativeQuery = true)
+    long countOrderItemsByProductId(@Param("id") Integer id);
+
+
 }
 
