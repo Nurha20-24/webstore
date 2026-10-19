@@ -299,34 +299,34 @@ Rollback-skripti pidetään valmiina ennen muutosta.
 Tässä osiossa kuvataan JPA-entiteettien väliset suhteet
 ja niiden toteutusratkaisut.
 
-**1:M — ProductCategory ja Product**
+**1:M — ProductCategory ja Product**   
 Yhdellä kategorialla voi olla monta tuotetta. Kategoriapää
 käyttää LAZY-latausta koska tuotelistaa ei tarvita joka
 haussa. Tuotepää käyttää EAGER-latausta koska kategorian
 nimi halutaan lähes aina tuotteen yhteydessä. CascadeType.ALL
 tarkoittaa että kategorian poisto poistaa myös sen tuotteet.
 
-**1:1 — Customer ja CustomerAddress**
+**1:1 — Customer ja CustomerAddress**  
 Asiakkaalla on yksi toimitusosoite. CustomerAddress omistaa
 suhteen koska vierasavain customer_id on sen taulussa.
 Asiakas käyttää EAGER-latausta koska osoite tarvitaan
 lähes aina asiakkaan yhteydessä.
 
-**N:M — Order ja Product (OrderItems-väliitaulu)**
+**N:M — Order ja Product (OrderItems-väliitaulu)**  
 Tilaus voi sisältää monta tuotetta ja tuote voi esiintyä
 monessa tilauksessa. Koska OrderItems-taulussa on lisäkenttiä
 (quantity, unit_price), tavallinen @ManyToMany ei riitä.
 Toteutettiin erillinen OrderItem-entiteetti väliitaululle
 ja @EmbeddedId yhdistelmäavaimen mallintamiseen.
 
-**Periytyminen — Customer ja CompanyCustomer**
+**Periytyminen — Customer ja CompanyCustomer**  
 Yritysasiakas perii Customer-luokan ja lisää kentät
 companyName ja businessId. Strategiana InheritanceType.SINGLE_TABLE
 koska lisäkenttiä on vain kaksi — NULL-arvoja syntyy vähän
 eikä JOIN-operaatioita tarvita. Discriminator-sarake
 customer_type erottaa henkilö- ja yritysasiakkaat.
 
-**N+1-ongelma ja ratkaisu**
+**N+1-ongelma ja ratkaisu**  
 Havaittiin N+1-ongelma GET /api/orders -kutsussa. 
 Ratkaistiin kahdella tavalla:
 sivutuksella joka rajoittaa palautettavan datan määrää,
@@ -380,4 +380,655 @@ HTTP 409 -vastauksen.
 
 ## API-PÄÄTEPISTEET
 
-osoite: http://localhost:8080/api
+Perusosoite: http://localhost:8080
+
+Kaikki vastaukset ovat JSON-muodossa. Virhetilanteissa palautetaan
+HTTP-statuskoodi 404 (resurssia ei löydy) tai 400 (virheellinen pyyntö).
+Onnistuneet poisto-operaatiot palauttavat 204 (ei sisältöä).
+
+---
+
+### Tuotteet — /api/products
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | /api/products | Hae kaikki tuotteet |
+| GET | /api/products/{id} | Hae tuote ID:llä |
+| GET | /api/products/search | Dynaaminen haku parametreilla |
+| POST | /api/products | Luo uusi tuote |
+| PUT | /api/products/{id} | Päivitä tuotteen tiedot |
+| PUT | /api/products/{id}/purchase | Osta tuote, vähentää varastosaldoa |
+| PUT | /api/products/price-update | Massapäivitys kategorian hinnoille |
+| DELETE | /api/products/{id} | Poista tuote |
+
+**GET /api/products**
+
+Palauttaa kaikki tuotteet listana.
+
+Esimerkkivastaus (200 OK):
+```json
+[
+  {
+    "id": 8,
+    "name": "Shiny Planet 299",
+    "description": "Us really personal yes into yourself task happen.",
+    "price": 767.24,
+    "stockQuantity": 179,
+    "version": 0
+  }
+]
+```
+
+**GET /api/products/{id}**
+
+Palauttaa yksittäisen tuotteen tiedot ID:n perusteella.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 8,
+  "name": "Shiny Planet 299",
+  "description": "Us really personal yes into yourself task happen.",
+  "price": 767.24,
+  "stockQuantity": 179,
+  "version": 0
+}
+```
+
+**GET /api/products/search**
+
+Dynaaminen tuotehaku Criteria API:lla. Kaikki parametrit ovat
+valinnaisia — voidaan antaa yksi, kaksi tai kaikki kolme.
+
+Parametrit:
+- minPrice (desimaaliluku, valinnainen)
+- maxPrice (desimaaliluku, valinnainen)
+- categoryId (kokonaisluku, valinnainen)
+
+Esimerkkikutsut:
+GET /api/products/search?minPrice=10&maxPrice=50
+GET /api/products/search?categoryId=1
+GET /api/products/search?minPrice=10&maxPrice=100&categoryId=1
+
+
+Esimerkkivastaus (200 OK):
+```json
+[
+  {
+    "id": 644,
+    "name": "Eco Shell 611",
+    "description": "Your all our score region how effort themselves write.",
+    "price": 11.44,
+    "stockQuantity": 144,
+    "version": 0
+  }
+]
+```
+
+**POST /api/products**
+
+Luo uuden tuotteen.
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Uusi tuote",
+  "description": "Kuvaus",
+  "price": 29.99,
+  "stockQuantity": 100
+}
+```
+
+**PUT /api/products/{id}**
+
+Päivittää tuotteen tiedot. Optimistinen lukitus (@Version) kasvattaa
+versionumeroa automaattisesti jokaisen päivityksen yhteydessä.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Updated Product",
+  "price": 99.99,
+  "stockQuantity": 50
+}
+```
+
+Esimerkkivastaus (200 OK) — (version kasvu 1):
+```json
+{
+  "id": 4,
+  "name": "Updated Product",
+  "description": null,
+  "price": 99.99,
+  "stockQuantity": 50,
+  "version": 1
+}
+```
+
+**PUT /api/products/{id}/purchase**
+
+Vähentää tuotteen varastosaldoa. Käyttää optimistista lukitusta
+estämään yliostamisen samanaikaisissa ostoissa. Jos varasto ei
+riitä, palautetaan 400. Jos samanaikainen päivitys havaitaan,
+palautetaan 409.
+
+Parametrit:
+- id (kokonaisluku, pakollinen)
+- quantity (kokonaisluku, pakollinen, query-parametri)
+
+Esimerkki: PUT /api/products/1/purchase?quantity=5
+
+Esimerkkivastaus (200 OK):
+
+    Purchase successful. New stock: 42
+
+
+**PUT /api/products/price-update**
+
+JPQL-massapäivitys joka nostaa kaikkien tietyn kategorian
+tuotteiden hintaa kertoimella. Yksi SQL-lause päivittää
+kaikki rivit kerralla ilman silmukkaa.
+
+Parametrit:
+- categoryId (kokonaisluku, pakollinen)
+- multiplier (desimaaliluku, pakollinen, esim. 1.1 = +10%)
+
+Esimerkki: PUT /api/products/price-update?categoryId=1&multiplier=1.1
+
+Esimerkkivastaus (200 OK):
+
+    Updated 98 products
+
+
+---
+
+### Kategoriat — /api/categories
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | /api/categories | Hae kaikki kategoriat tuotteineen |
+| GET | /api/categories/{id} | Hae kategoria ID:llä |
+| POST | /api/categories | Luo uusi kategoria |
+| DELETE | /api/categories/{id} | Poista kategoria ja sen tuotteet |
+
+**GET /api/categories**
+
+Palauttaa kaikki kategoriat ja niihin kuuluvat tuotteet.
+Hyödyntää 1:M-assosiaatiota ProductCategory -> Product.
+
+Esimerkkivastaus (200 OK):
+```json
+[
+  {
+    "id": 1,
+    "name": "Elektroniikka",
+    "description": "Sähkölaitteet, komponentit ja elektroniikkatuotteet",
+    "products": [
+      {
+        "id": 7,
+        "name": "Magic Bit 840",
+        "price": 387.59,
+        "stockQuantity": 378,
+        "version": 0
+      }
+    ]
+  }
+]
+```
+
+**GET /api/categories/{id}**
+
+Palauttaa yksittäisen kategorian ja siihen kuuluvat tuotteet.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 22,
+  "name": "Testikategoria",
+  "description": "Testausta varten",
+  "products": []
+}
+```
+
+**POST /api/categories**
+
+Luo uuden kategorian.
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Testikategoria",
+  "description": "Testausta varten"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 28,
+  "name": "Testikategoria",
+  "description": "Testausta varten",
+  "products": null
+}
+```
+
+**DELETE /api/categories/{id}**
+
+Poistaa kategorian. CascadeType.ALL poistaa automaattisesti
+myös kaikki kategorian tuotteet. Todennettu: kategoria id 28
+poistettiin (204), ja sen jälkeen GET palautti 404.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (Onnistunut poisto):
+
+    HTTP/1.1 204 No Content
+
+---
+
+### Asiakkaat — /api/customers
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | /api/customers | Hae kaikki asiakkaat |
+| GET | /api/customers/{id} | Hae asiakas osoitteineen ja tilauksineen |
+| POST | /api/customers | Luo henkilöasiakas |
+| POST | /api/customers/company | Luo yritysasiakas |
+
+**GET /api/customers**
+
+Palauttaa kaikki asiakkaat osoitteineen ja tilauksineen.
+
+
+**GET /api/customers/{id}**
+
+Palauttaa asiakkaan tiedot, toimitusosoitteen (1:1-assosiaatio)
+ja tilaushistorian tilausriveineen.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 1,
+  "first_name": "Dustin",
+  "last_name": "Carey",
+  "email": "vsmith1@example.com",
+  "phone": "001-789-824-7188x591",
+  "address": {
+    "id": 1,
+    "streetAddress": "39650 Harrington Plains Suite 474",
+    "postalCode": "95942",
+    "city": "Larryview",
+    "country": "Guadeloupe"
+  },
+  "orders": [
+    {
+      "id": 181269,
+      "orderDate": "2024-05-02T00:20:53",
+      "deliveryDate": "2024-05-08T04:18:07",
+      "status": "EXPIRED",
+      "orderItems": [
+        {
+          "quantity": 2,
+          "unitPrice": 534.50,
+          "product": {
+            "id": 183,
+            "name": "Turbo Blade 398",
+            "price": 534.50
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**POST /api/customers**
+
+Luo uuden henkilöasiakkaan.
+
+Esimerkkipyyntö:
+```json
+{
+  "first_name": "Testi",
+  "last_name": "Käyttäjä",
+  "email": "testi@example.fi",
+  "phone": "040-1111111"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 100003,
+  "first_name": "Testi",
+  "last_name": "Käyttäjä",
+  "email": "testi@example.fi",
+  "phone": "040-1111111",
+  "address": null,
+  "orders": null
+}
+```
+
+**POST /api/customers/company**
+
+Luo yritysasiakkaan. Hyödyntää JPA-periytymistä
+(InheritanceType.SINGLE_TABLE). Yritysasiakas tallentuu
+samaan Customers-tauluun kuin henkilöasiakas mutta
+customer_type-sarake erottaa ne (PERSONAL / COMPANY).
+
+Esimerkkipyyntö:
+```json
+{
+  "firstName": "Matti",
+  "lastName": "Meikäläinen",
+  "email": "matti@firma.fi",
+  "companyName": "Firma Oy",
+  "businessId": "1234567-8"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 100002,
+  "first_name": "Matti",
+  "last_name": "Meikäläinen",
+  "email": "matti@firma.fi",
+  "phone": null,
+  "companyName": "Firma Oy",
+  "businessId": "1234567-8",
+  "address": null,
+  "orders": null
+}
+```
+
+---
+
+### Tilaukset — /api/orders
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | /api/orders | Hae tilaukset sivutettuna |
+| GET | /api/orders/{id} | Hae tilaus tilausriveineen |
+| GET | /api/orders/with-customers | Hae tilaukset JOIN FETCHillä sivutettuna |
+| POST | /api/orders | Luo uusi tilaus |
+
+**GET /api/orders**
+
+Palauttaa tilaukset sivutettuna. Sivutus on tärkeä koska
+tietokannassa on 200 000+ tilausta. 
+
+Parametrit:
+- page (kokonaisluku, oletusarvo 0)
+- size (kokonaisluku, oletusarvo 20)
+
+Esimerkki: GET /api/orders?page=0&size=20
+
+Esimerkkivastaus (200 OK) — sisältää sivutusmetatiedot:
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "orderDate": "2024-04-03T17:51:08",
+      "deliveryDate": "2024-04-06T16:16:43",
+      "status": "CANCELLED",
+      "orderItems": [
+        {
+          "quantity": 2,
+          "unitPrice": 736.44,
+          "product": {
+            "id": 426,
+            "name": "Nova Blade 383",
+            "price": 736.44,
+            "stockQuantity": 175
+          }
+        }
+      ]
+    }
+  ],
+  "totalElements": 200004,
+  "totalPages": 10001,
+  "number": 0,
+  "size": 20,
+  "first": true,
+  "last": false
+}
+```
+
+**GET /api/orders/{id}**
+
+Palauttaa yksittäisen tilauksen asiakastietoineen ja
+tilausriveineen. Hyödyntää N:M-assosiaatiota
+OrderItems-väliitaulun kautta (order_id + product_id
+yhdistelmäavain @EmbeddedId:llä).
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 1,
+  "orderDate": "2024-04-03T17:51:08",
+  "deliveryDate": "2024-04-06T16:16:43",
+  "status": "CANCELLED",
+  "orderItems": [
+    {
+      "quantity": 2,
+      "unitPrice": 736.44,
+      "product": {
+        "id": 426,
+        "name": "Nova Blade 383",
+        "price": 736.44,
+        "stockQuantity": 175
+      }
+    }
+  ]
+}
+```
+
+**POST /api/orders**
+
+Luo uuden tilauksen. Kaksi automaattista toimintoa:
+
+OrderStatusConverter muuntaa status-kentän isoille
+kirjaimille — "new" tallentuu muodossa "NEW".
+
+@PrePersist asettaa orderDate-kentän automaattisesti
+jos sitä ei anneta pyynnössä.
+
+Esimerkkipyyntö ilman orderDatea:
+```json
+{
+  "customer": { "id": 1 }
+}
+```
+
+Esimerkkivastaus — orderDate asettui automaattisesti,
+status oletuksena "NEW":
+```json
+{
+  "id": 200046,
+  "orderDate": "2026-10-18T11:39:11.200517",
+  "deliveryDate": null,
+  "status": "NEW",
+  "orderItems": null
+}
+```
+
+Esimerkkipyyntö status pienillä kirjaimilla:
+```json
+{
+  "status": "new",
+  "customer": { "id": 1 }
+}
+```
+
+Esimerkkivastaus — muunnin muutti status isoiksi kirjaimiksi:
+```json
+{
+  "id": 200045,
+  "orderDate": "2026-10-18T11:38:49.318364",
+  "status": "NEW",
+  "orderItems": null
+}
+```
+
+---
+
+### Toimittajat — /api/suppliers
+
+| Metodi | Päätepiste | Kuvaus |
+|--------|------------|--------|
+| GET | /api/suppliers | Hae kaikki toimittajat |
+| GET | /api/suppliers/{id} | Hae toimittaja osoitteineen ja tuotteineen |
+| POST | /api/suppliers | Luo uusi toimittaja |
+| PUT | /api/suppliers/{id} | Päivitä toimittajan tiedot |
+| DELETE | /api/suppliers/{id} | Poista toimittaja |
+
+**GET /api/suppliers**
+
+Palauttaa kaikki toimittajat osoitteineen ja tuotteineen.
+
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "addresses": [
+    {
+      "city": "Rovaniemi",
+      "country": "Suomi",
+      "id": 1,
+      "postalCode": "96400",
+      "streetAddress": "Kairatie 5"
+    }
+  ],
+  "contactName": "Mia Manninen",
+  "email": "mia.manninen@polarelec.fi",
+  "id": 1,
+  "name": "Polar Electronics Oy",
+  "phone": "0401001000",
+  "products": [
+    {
+      "description": "World yet room provide at skin particular process.",
+      "id": 111,
+      "name": "Nifty Kit 939",
+      "price": 745.53,
+      "stockQuantity": 237,
+      "version": 0
+    }
+  ]
+}
+
+```
+
+**GET /api/suppliers/{id}**
+
+Palauttaa yksittäisen toimittajan yhteystiedot,
+osoitteet ja toimittajan tuotteet.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "addresses": [
+    {
+      "city": "Toronto",
+      "country": "Canada",
+      "id": 7,
+      "postalCode": "ON M4B 1B3",
+      "streetAddress": "Maple Street 587"
+    }
+  ],
+  "contactName": "Daniel Cooper",
+  "email": "daniel.cooper@redmaple.ca",
+  "id": 7,
+  "name": "Red Maple Supplies",
+  "phone": "0445879630",
+  "products": [
+    {
+      "description": "Ability simple under value course.",
+      "id": 29,
+      "name": "Amazing Blob 125",
+      "price": 627.62,
+      "stockQuantity": 3,
+      "version": 0
+    }
+  ]
+}
+```
+
+**POST /api/suppliers**
+
+Luo uuden toimittajan.
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Testi Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-1234567",
+  "email": "matti@testitukku.fi"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 103,
+  "name": "Testi Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-1234567",
+  "email": "matti@testitukku.fi",
+  "addresses": null,
+  "products": null
+}
+```
+
+**PUT /api/suppliers/{id}**
+
+Päivittää toimittajan tiedot.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkipyyntö:
+```json
+{
+  "name": "Päivitetty Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-9999999",
+  "email": "uusi@testitukku.fi"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 103,
+  "name": "Päivitetty Tukku Oy",
+  "contactName": "Matti Myyjä",
+  "phone": "040-9999999",
+  "email": "uusi@testitukku.fi",
+  "addresses": [],
+  "products": []
+}
+```
+
+**DELETE /api/suppliers/{id}**
+
+Poistaa toimittajan.
+
+Parametrit: id (kokonaisluku, pakollinen)
+
+Esimerkkivastaus: (Onnistunut poisto)
+
+    HTTP/1.1 204 No Content
