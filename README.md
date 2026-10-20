@@ -44,21 +44,33 @@ kautta voidaan lukea, lisätä, muokata ja poistaa tietoja tietokannasta.
 
 ### Tietokannan käyttöönotto
 
-Luo ensin tietokanta MariaDB:hen:
+Aja SQL-tiedostot tässä järjestyksessä:
+
+**1. Luo tietokanta:**
 
     CREATE DATABASE webstore;
 
-Luo sen jälkeen kaksi käyttäjää — ylläpitäjä ja sovelluskäyttäjä.
-Ylläpitäjällä on täydet oikeudet tietokantaan. Sovelluskäyttäjällä
-on vain luku-, lisäys- ja päivitysoikeudet — ei poisto- eikä
-skeemamuutosoikeuksia. Tämä rajoittaa sovellusvirheiden vaikutuksia.
+**2. Luo tietokanta, taulut ja testaudata:**
 
-Käyttäjien luontiohjeet: sql/create_users.sql
+    SOURCE sql/schema_populated_dump.sql;
 
-Aja sen jälkeen tietokantaskripti joka luo taulut, näkymät,
-liipaisimet, tapahtumat ja indeksit:
+**3. Luo käyttäjät:**
 
-    SOURCE sql/schema.sql;
+    SOURCE sql/create_users.sql;
+
+**4. Luo indeksit, näkymät, liipaisimet ja tapahtumat:**
+
+    SOURCE sql/schema_extensions.sql;
+
+SQL-tiedostot kansiossa `sql/`:
+
+| Tiedosto | Sisältö                                                            |
+|----------|--------------------------------------------------------------------|
+| schema_populated_dump.sql | Tietokannan rakenne ja testaudata                                  |
+| create_users.sql | Tietokantakäyttäjät ja oikeudet                                    |
+| schema_extensions.sql | Indeksit, näkymät, liipaisimet, tapahtumat, temporaaliominaisuudet |
+| queries.sql | SQL-kyselyt ja transaktioesimerkit tehtävistä 1—5 ja 9             |
+
 
 ### REST API:n käynnistys
 
@@ -127,27 +139,30 @@ Optimoitu JOIN-versio laski hakurivien määrän 386:een.
 
 Transaktioita käytetään tilanteissa joissa useiden
 tietokantaoperaatioiden on onnistuttava yhdessä tai
-epäonnistuttava kokonaan. Puolittaiset muutokset eivät
-koskaan jää tietokantaan.
+epäonnistuttava kokonaan.
 
-Tunnistetut tilanteet joissa transaktio on välttämätön:
+**Toteutus kahdella tasolla:**
 
-**Tilauksen tekeminen** vaatii kolme operaatiota — tilausrivin
-lisäämisen, tilaustuotteiden lisäämisen ja varastosaldon
-vähentämisen. Jos esimerkiksi tuotetta ei löydy tai varasto
-loppuu kesken, koko tilaus peruutetaan.
+Tietokantatasolla (sql/queries.sql) testattiin transaktioita
+SQL:llä — sekä onnistunut tilaus että tahallisesti aiheutettu
+virhetilanne ROLLBACKilla. Todennettiin että puolittaisia
+muutoksia ei jää tietokantaan.
 
-**Tilauksen peruutus** vaatii sekä varastosaldon palautuksen
-että statuksen päivityksen. Jos vain toinen onnistuu,
-järjestelmä jää epäjohdonmukaiseen tilaan.
+Spring Boot -tasolla transaktio on toteutettu
+`POST /api/orders/complete` -päätepisteessä
+@Transactional-annotaatiolla OrderService-luokassa.
+Operaatio sisältää kolme vaihetta:
+1. Tilauksen luonti Orders-tauluun
+2. Tilausrivien luonti OrderItems-tauluun
+3. Varastosaldon vähennys jokaiselle tuotteelle
 
-Spring Boot -sovelluksessa transaktiot on toteutettu
-@Transactional-annotaatiolla service-tasolla. Tietokantatasolla
-testattiin sekä automaattinen rivilukitus että eksplisiittinen
-SELECT ... FOR UPDATE -lukitus.
+Jos jokin vaihe epäonnistuu, @Transactional peruuttaa
+kaikki muutokset automaattisesti. Testattu kahdella
+virhetilanteella: tuotetta ei löydy ja varasto ei riitä —
+molemmissa tilauksesta ei jäänyt jälkiä tietokantaan.
 
-Transaktioiden SQL-esimerkit: sql/Queries.sql
-
+SQL-esimerkit: sql/queries.sql
+Spring Boot -toteutus: OrderService.java
 ---
 
 ### Rinnakkaiskäyttö ja lukitus
@@ -197,7 +212,7 @@ GROUP BY -lauseella. Näkymää käytetään kategoriatilastojen
 hakemiseen. Näkymä ei ole päivitettävissä suoraan koska
 se sisältää koostefunktion.
 
-Näkymien luontilauseet: sql/schema.sql
+Näkymien luontilauseet: sql/schema_extensions.sql
 
 ---
 
@@ -212,7 +227,7 @@ vanhan varastosaldon, uuden varastosaldon ja muutosajan
 ProductStockLog-lokitauluun. Näin kaikki varastosaldon
 muutokset ovat jäljitettävissä jälkikäteen.
 
-Liipaisimen toteutus: sql/schema.sql
+Liipaisimen toteutus: sql/schema_extensions.sql
 
 ---
 
@@ -228,7 +243,7 @@ jossa maksamattomat tilaukset vanhentuvat automaattisesti
 ilman manuaalista ylläpitoa. Tuotantoympäristössä aikaväli
 olisi esimerkiksi 30 minuuttia.
 
-Ajastetun tapahtuman toteutus: sql/schema.sql
+Ajastetun tapahtuman toteutus: sql/schema_extensions.sql
 
 ---
 
@@ -376,30 +391,46 @@ päivityksessä. Jos kaksi transaktiota yrittää päivittää
 samaa versiota samanaikaisesti, jälkimmäinen saa
 HTTP 409 -vastauksen.
 
+### DTO-kerros (Data Transfer Object)
+
+API käyttää DTO-luokkia erottamaan tietokantaentiteetit API-vastauksista. 
+DTO määrää tarkasti mitä tietoja palautetaan ja estää tietokantakenttien suoran paljastamisen.
+
 ---
 
 ## API-PÄÄTEPISTEET
 
-Perusosoite: http://localhost:8080
+Perusosoite: [http://localhost:8080/api](http://localhost:8080/api)
 
-Kaikki vastaukset ovat JSON-muodossa. Virhetilanteissa palautetaan
-HTTP-statuskoodi 404 (resurssia ei löydy) tai 400 (virheellinen pyyntö).
-Onnistuneet poisto-operaatiot palauttavat 204 (ei sisältöä).
+Kaikki vastaukset ovat JSON-muodossa. 
+Virhetilanteissa palautetaan HTTP-statuskoodi 400 (virheellinen pyyntö) tai 404 (resurssia ei löydy). 
+Onnistuneet poisto-operaatiot palauttavat statuskoodin 204 (ei sisältöä).
+
+API-päätepisteet on ryhmitelty resurssin mukaan. 
+Alla on kuvattu kunkin resurssin käytettävissä olevat operaatiot, 
+niiden tarkoitus sekä pyyntöjen ja vastausten rakenteet.
+
+- [Tuotteet (Products) — `/api/products`](#tuotteet--apiproducts)
+- [Kategoriat (Categories) — `/api/categories`](#kategoriat--apicategories)
+- [Asiakkaat (Customers) — `/api/customers`](#asiakkaat--apicustomers)
+- [Tilaukset (Orders) — `/api/orders`](#tilaukset--apiorders)
+- [Toimittajat (Suppliers) — `/api/suppliers`](#toimittajat--apisuppliers)
+- [Kontaktit (Contacts) — `/api/contacts`](#kontaktit--apicontacts)
 
 ---
 
-### Tuotteet — /api/products
+### Tuotteet (Products) — `/api/products`
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
 | GET | /`api/products` | Hae kaikki tuotteet |
-| GET | /`api/products/{id}` | Hae tuote ID:llä |
-| GET | /`api/products/search` | Dynaaminen haku parametreilla |
-| POST | /`api/products` | Luo uusi tuote |
-| PUT | /`api/products/{id}` | Päivitä tuotteen tiedot |
-| PUT | /`api/products/{id}/purchase` | Osta tuote, vähentää varastosaldoa |
-| PUT | /`api/products/price-update` | Massapäivitys kategorian hinnoille |
-| DELETE | /`api/products/{id}` | Poista tuote |
+| GET | `/api/products/{id}` | Hae tuote ID:llä |
+| GET | `/api/products/search` | Dynaaminen haku parametreilla |
+| POST | `/api/products` | Luo uusi tuote |
+| PUT | `/api/products/{id}` | Päivitä tuotteen tiedot |
+| PUT | `/api/products/{id}/purchase` | Osta tuote, vähentää varastosaldoa |
+| PUT | `/api/products/price-update` | Massapäivitys kategorian hinnoille |
+| DELETE | `/api/products/{id}` | Poista tuote |
 
 ---
 
@@ -552,15 +583,15 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 ---
 
-### Kategoriat — /api/categories
+### Kategoriat (Categories) — /api/categories
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /`api/categories` | Hae kaikki kategoriat tuotteineen |
-| GET | /`api/categories/{id}` | Hae kategoria ID:llä |
-| PUT | /`api/categories/{id}` | Päivitä kategorian tiedot |
-| POST | /`api/categories` | Luo uusi kategoria |
-| DELETE | /`api/categories/{id}` | Poista kategoria ja sen tuotteet |
+| GET | `/api/categories` | Hae kaikki kategoriat tuotteineen |
+| GET | `/api/categories/{id}` | Hae kategoria ID:llä |
+| PUT | `/api/categories/{id}` | Päivitä kategorian tiedot |
+| POST | `/api/categories` | Luo uusi kategoria |
+| DELETE | `/api/categories/{id}` | Poista kategoria ja sen tuotteet |
 
 ---
 
@@ -665,104 +696,56 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 ---
 
-### Asiakkaat — /api/customers
+### Asiakkaat (Customers) — /api/customers
 
-| Metodi | Päätepiste | Kuvaus |
-|--------|------------|--------|
-| GET | /`api/customers` | Hae kaikki asiakkaat |
-| GET | /`api/customers/{id}` | Hae asiakas osoitteineen ja tilauksineen |
-| POST | /`api/customers` | Luo henkilöasiakas |
-| POST | /`api/customers/company` | Luo yritysasiakas |
+| Metodi | Päätepiste | Kuvaus                             |
+|--------|------------|------------------------------------|
+| GET | `/api/customers` | Hae kaikki asiakkaat (perustiedot) |
+| GET | `/api/customers/{id}` | Hae asiakas osoitteineen           |
+| POST | `/api/customers` | Luo henkilöasiakas                 |
+| POST | `/api/customers/company` | Luo yritysasiakas                  |
+| PUT | `/api/customers/{id}` | Päivitä asiakkaan tiedot           |
+| DELETE | `/api/customers/{id}` | Poista asiakas                     |
+
 
 ---
 
 **GET `/api/customers`**
 
-Palauttaa kaikki asiakkaat osoitteineen ja tilauksineen.
+Palauttaa kaikki asiakkaat perustiedoilla (ilman osoitetta ja tilauksia).
 
 Esimerkkivastaus (200 OK):
 ```json
-{
-  "id": 1,
-  "first_name": "Dustin",
-  "last_name": "Carey",
-  "email": "vsmith1@example.com",
-  "phone": "001-789-824-7188x591",
-  "address": {
+[
+  {
     "id": 1,
-    "streetAddress": "39650 Harrington Plains Suite 474",
-    "postalCode": "95942",
-    "city": "Larryview",
-    "country": "Guadeloupe"
-  },
-  "orders": [
-    {
-      "id": 181269,
-      "orderDate": "2024-05-02T00:20:53",
-      "deliveryDate": "2024-05-08T04:18:07",
-      "status": "EXPIRED",
-      "orderItems": [
-        {
-          "quantity": 2,
-          "unitPrice": 534.50,
-          "product": {
-            "id": 183,
-            "name": "Turbo Blade 398",
-            "price": 534.50
-          }
-        }
-      ]
-    }
-  ]
-}
+    "firstName": "Dustin",
+    "lastName": "Carey",
+    "email": "vsmith1@example.com",
+    "phone": "001-789-824-7188x591"
+  }
+]
 ```
 
 **GET `/api/customers/{id}`**
 
-Palauttaa asiakkaan tiedot, toimitusosoitteen (1:1-assosiaatio)
-ja tilaushistorian tilausriveineen.
+Palauttaa asiakkaan tiedot, toimitusosoitteen ja tilauksen lukumäärän.
 
 Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
 {
-  "address": {
-    "city": "New Jonathanmouth",
-    "country": "Azerbaijan",
-    "id": 6,
-    "postalCode": "78800",
-    "streetAddress": "7235 Frederick Neck"
-  },
-  "email": "hughesthomas6@example.com",
-  "first_name": "Christian",
   "id": 6,
-  "last_name": "Meyer",
-  "orders": [
-    {
-      "deliveryDate": "2025-03-14T09:51:07",
-      "id": 80897,
-      "orderDate": "2025-03-13T07:49:41",
-      "orderItems": [
-        {
-          "product": {
-            "description": "Hit safe line hotel make body.",
-            "id": 421,
-            "name": "Super Hub 763",
-            "price": 161.44,
-            "stockQuantity": 362,
-            "version": 0
-          },
-          "quantity": 1,
-          "unitPrice": 133.42,
-          "id": {
-            "orderId": 80897,
-            "productId": 421
-          }
-        }
-      ]
-    }
-  ]
+  "firstName": "Christian",
+  "lastName": "Meyer",
+  "email": "hughesthomas6@example.com",
+  "phone": "+1-293-637-2620x1799",
+  "streetAddress": "7235 Frederick Neck",
+  "postalCode": "78800",
+  "city": "New Jonathanmouth",
+  "country": "Azerbaijan",
+  "orderCount": 2
 }
 ```
 
@@ -826,18 +809,56 @@ Esimerkkivastaus (200 OK):
 }
 ```
 
+**PUT `/api/customers/{id}`**
+
+Päivittää asiakkaan perustiedot.
+
+Parametrit: `id` (kokonaisluku, pakollinen)
+
+Esimerkkipyyntö:
+```json
+{
+  "first_name": "Päivitetty",
+  "last_name": "Käyttäjä",
+  "email": "paivitetty@example.fi",
+  "phone": "040-9999999"
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 100003,
+  "firstName": "Päivitetty",
+  "lastName": "Käyttäjä",
+  "email": "paivitetty@example.fi",
+  "phone": "040-9999999"
+}
+```
+
+**DELETE `/api/customers/{id}`**
+
+Poistaa asiakkaan.
+
+Parametrit: `id` (kokonaisluku, pakollinen)
+
+Esimerkkivastaus: (Onnistunut poisto)
+
+    HTTP/1.1 204 No Content
+
 ---
 
-### Tilaukset — /api/orders
+### Tilaukset (Orders) — /api/orders
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /`api/orders` | Hae tilaukset sivutettuna |
-| GET | /`api/orders/{id}` | Hae tilaus tilausriveineen |
-| GET | /`api/orders/with-customers` | Hae tilaukset JOIN FETCHillä sivutettuna |
-| POST | /`api/orders` | Luo uusi tilaus |
-| PUT | /`api/orders/{id}` | Päivitä tilauksen status ja toimituspäivä |
-| DELETE | /`api/orders/{id}` | Poista tilaus ja sen tilausrivit |
+| GET | `/api/orders` | Hae tilaukset sivutettuna |
+| GET | `/api/orders/{id}` | Hae tilaus tilausriveineen |
+| GET | `/api/orders/with-customers` | Hae tilaukset JOIN FETCHillä sivutettuna |
+| POST | `/api/orders` | Luo uusi tilaus |
+| POST | `/api/orders/complete` | Luo täydellinen tilaus transaktiolla |
+| PUT | `/api/orders/{id}` | Päivitä tilauksen status ja toimituspäivä |
+| DELETE | `/api/orders/{id}` | Poista tilaus ja sen tilausrivit |
 
 
 ---
@@ -848,8 +869,8 @@ Palauttaa tilaukset sivutettuna. Sivutus on tärkeä koska
 tietokannassa on 200 000+ tilausta. 
 
 Parametrit:
-- page (kokonaisluku, oletusarvo 0)
-- size (kokonaisluku, oletusarvo 20)
+- `page` (kokonaisluku, oletusarvo 0)
+- `size` (kokonaisluku, oletusarvo 20)
 
 Esimerkki: GET `/api/orders?page=0&size=20`
 
@@ -945,6 +966,51 @@ status oletuksena "NEW":
 }
 ```
 
+**POST `/api/orders/complete`**
+
+Luo täydellinen tilaus transaktiolla. Operaatio on atominen —
+kaikki vaiheet onnistuvat yhdessä tai koko tilaus peruutetaan.
+
+Jos jokin vaihe epäonnistuu (tuotetta ei löydy, varasto ei riitä),
+@Transactional peruuttaa kaikki muutokset automaattisesti.
+
+Esimerkkipyyntö:
+```json
+{
+  "customerId": 1,
+  "items": [
+    { "productId": 10, "quantity": 2 },
+    { "productId": 20, "quantity": 1 }
+  ]
+}
+```
+
+Esimerkkivastaus (200 OK):
+```json
+{
+  "id": 200055,
+  "orderDate": "2026-10-20T11:48:35.537819",
+  "status": "NEW",
+  "orderItems": [
+    {
+      "quantity": 2,
+      "unitPrice": 60.49,
+      "product": {
+        "id": 10,
+        "name": "Funky Cube 381",
+        "price": 60.49,
+        "stockQuantity": 98,
+        "version": 1
+      }
+    }
+  ]
+}
+```
+
+Virhetilanteet:
+
+    Varasto ei riitä (400):
+
 **PUT `/api/orders/{id}`**
 
 Päivittää tilauksen statuksen ja/tai toimituspäivän.
@@ -1003,89 +1069,81 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 ---
 
-### Toimittajat — /api/suppliers
+### Toimittajat (Suppliers) — /api/suppliers
 
-| Metodi | Päätepiste | Kuvaus |
-|--------|------------|--------|
-| GET | /`api/suppliers` | Hae kaikki toimittajat |
-| GET | /`api/suppliers/{id}` | Hae toimittaja osoitteineen ja tuotteineen |
-| POST | /`api/suppliers` | Luo uusi toimittaja |
-| PUT | /`api/suppliers/{id}` | Päivitä toimittajan tiedot |
-| DELETE | /`api/suppliers/{id}` | Poista toimittaja |
+| Metodi | Päätepiste | Kuvaus                               |
+|--------|------------|--------------------------------------|
+| GET | `/api/suppliers` | Hae kaikki toimittajat (perustiedot) |
+| GET | `/api/suppliers/{id}` | Hae toimittaja osoitteineen          |
+| GET | `/api/suppliers/{id}/products` | Hae toimittajan kaikki tuotteet |
+| POST | `/api/suppliers` | Luo uusi toimittaja                  |
+| PUT | `/api/suppliers/{id}` | Päivitä toimittajan tiedot           |
+| DELETE | `/api/suppliers/{id}` | Poista toimittaja                    |
 
 ---
 
 **GET `/api/suppliers`**
 
-Palauttaa kaikki toimittajat osoitteineen ja tuotteineen.
-
+Palauttaa kaikki toimittajat perustiedoilla (ilman osoitteita ja tuotteita).
 
 Esimerkkivastaus (200 OK):
 ```json
-{
-  "addresses": [
-    {
-      "city": "Rovaniemi",
-      "country": "Suomi",
-      "id": 1,
-      "postalCode": "96400",
-      "streetAddress": "Kairatie 5"
-    }
-  ],
-  "contactName": "Mia Manninen",
-  "email": "mia.manninen@polarelec.fi",
-  "id": 1,
-  "name": "Polar Electronics Oy",
-  "phone": "0401001000",
-  "products": [
-    {
-      "description": "World yet room provide at skin particular process.",
-      "id": 111,
-      "name": "Nifty Kit 939",
-      "price": 745.53,
-      "stockQuantity": 237,
-      "version": 0
-    }
-  ]
-}
-
+[
+  {
+    "id": 1,
+    "name": "Polar Electronics Oy",
+    "contactName": "Mia Manninen",
+    "phone": "0401001000",
+    "email": "mia.manninen@polarelec.fi"
+  }
+]
 ```
 
 **GET `/api/suppliers/{id}`**
 
 Palauttaa yksittäisen toimittajan yhteystiedot,
-osoitteet ja toimittajan tuotteet.
+ensimmäisen osoitteen ja toimittajan tuotteiden lukumäärän.
 
 Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
 {
-  "addresses": [
-    {
-      "city": "Toronto",
-      "country": "Canada",
-      "id": 7,
-      "postalCode": "ON M4B 1B3",
-      "streetAddress": "Maple Street 587"
-    }
-  ],
-  "contactName": "Daniel Cooper",
-  "email": "daniel.cooper@redmaple.ca",
   "id": 7,
   "name": "Red Maple Supplies",
+  "contactName": "Daniel Cooper",
   "phone": "0445879630",
-  "products": [
-    {
-      "description": "Ability simple under value course.",
-      "id": 29,
-      "name": "Amazing Blob 125",
-      "price": 627.62,
-      "stockQuantity": 3,
-      "version": 0
-    }
-  ]
+  "email": "daniel.cooper@redmaple.ca",
+  "streetAddress": "Maple Street 587",
+  "postalCode": "ON M4B 1B3",
+  "city": "Toronto",
+  "country": "Canada",
+  "productCount": 9
 }
+```
+
+**GET `/api/suppliers/{id}/products`**
+
+Palauttaa toimittajan kaikki tuotteet kategoriatietoineen.
+Erillinen päätepiste koska tuotelista on tarpeen vain
+erikseen pyydettäessä.
+
+Parametrit: `id` (kokonaisluku, pakollinen)
+
+Esimerkkivastaus (200 OK):
+```json
+[
+  {
+    "id": 29,
+    "name": "Amazing Blob 125",
+    "description": "Ability simple under value course.",
+    "price": 627.62,
+    "stockQuantity": 3,
+    "version": 0,
+    "categoryId": 7,
+    "categoryName": "Huonekalut"
+  }
+]
 ```
 
 **POST `/api/suppliers`**
@@ -1156,7 +1214,7 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 ---
 
-### Kontaktit — `/api/contacts`
+### Kontaktit (Contacts) — `/api/contacts`
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
