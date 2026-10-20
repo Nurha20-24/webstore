@@ -146,7 +146,7 @@ Spring Boot -sovelluksessa transaktiot on toteutettu
 testattiin sekä automaattinen rivilukitus että eksplisiittinen
 SELECT ... FOR UPDATE -lukitus.
 
-Transaktioiden SQL-esimerkit: sql/queries.sql
+Transaktioiden SQL-esimerkit: sql/Queries.sql
 
 ---
 
@@ -392,14 +392,14 @@ Onnistuneet poisto-operaatiot palauttavat 204 (ei sisältöä).
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /api/products | Hae kaikki tuotteet |
-| GET | /api/products/{id} | Hae tuote ID:llä |
-| GET | /api/products/search | Dynaaminen haku parametreilla |
-| POST | /api/products | Luo uusi tuote |
-| PUT | /api/products/{id} | Päivitä tuotteen tiedot |
-| PUT | /api/products/{id}/purchase | Osta tuote, vähentää varastosaldoa |
-| PUT | /api/products/price-update | Massapäivitys kategorian hinnoille |
-| DELETE | /api/products/{id} | Poista tuote |
+| GET | /`api/products` | Hae kaikki tuotteet |
+| GET | /`api/products/{id}` | Hae tuote ID:llä |
+| GET | /`api/products/search` | Dynaaminen haku parametreilla |
+| POST | /`api/products` | Luo uusi tuote |
+| PUT | /`api/products/{id}` | Päivitä tuotteen tiedot |
+| PUT | /`api/products/{id}/purchase` | Osta tuote, vähentää varastosaldoa |
+| PUT | /`api/products/price-update` | Massapäivitys kategorian hinnoille |
+| DELETE | /`api/products/{id}` | Poista tuote |
 
 ---
 
@@ -425,7 +425,7 @@ Esimerkkivastaus (200 OK):
 
 Palauttaa yksittäisen tuotteen tiedot ID:n perusteella.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -445,9 +445,9 @@ Dynaaminen tuotehaku Criteria API:lla. Kaikki parametrit ovat
 valinnaisia — voidaan antaa yksi, kaksi tai kaikki kolme.
 
 Parametrit:
-- minPrice (desimaaliluku, valinnainen)
-- maxPrice (desimaaliluku, valinnainen)
-- categoryId (kokonaisluku, valinnainen)
+- `minPrice` (desimaaliluku, valinnainen)
+- `maxPrice` (desimaaliluku, valinnainen)
+- `categoryId` (kokonaisluku, valinnainen)
 
 Esimerkkikutsut: GET `/api/products/search?minPrice=10&maxPrice=50`
 
@@ -484,7 +484,7 @@ Esimerkkipyyntö:
 Päivittää tuotteen tiedot. Optimistinen lukitus (@Version) kasvattaa
 versionumeroa automaattisesti jokaisen päivityksen yhteydessä.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkipyyntö:
 ```json
@@ -515,8 +515,8 @@ riitä, palautetaan 400. Jos samanaikainen päivitys havaitaan,
 palautetaan 409.
 
 Parametrit:
-- id (kokonaisluku, pakollinen)
-- quantity (kokonaisluku, pakollinen, query-parametri)
+- `id` (kokonaisluku, pakollinen)
+- `quantity` (kokonaisluku, pakollinen, query-parametri)
 
 Esimerkki: PUT `/api/products/1/purchase?quantity=5`
 
@@ -531,8 +531,8 @@ tuotteiden hintaa kertoimella. Yksi SQL-lause päivittää
 kaikki rivit kerralla ilman silmukkaa.
 
 Parametrit:
-- categoryId (kokonaisluku, pakollinen)
-- multiplier (desimaaliluku, pakollinen, esim. 1.1 = +10%)
+- `categoryId` (kokonaisluku, pakollinen)
+- `multiplier` (desimaaliluku, pakollinen, esim. 1.1 = +10%)
 
 Esimerkki: PUT `/api/products/price-update?categoryId=1&multiplier=1.1`
 
@@ -544,7 +544,7 @@ Esimerkkivastaus (200 OK):
 
 Poistaa tuotteen ID:n perusteella.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus: (Onnistunut poisto)
 
@@ -556,11 +556,11 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /api/categories | Hae kaikki kategoriat tuotteineen |
-| GET | /api/categories/{id} | Hae kategoria ID:llä |
-| PUT | /api/categories/{id} | Päivitä kategorian tiedot |
-| POST | /api/categories | Luo uusi kategoria |
-| DELETE | /api/categories/{id} | Poista kategoria ja sen tuotteet |
+| GET | /`api/categories` | Hae kaikki kategoriat tuotteineen |
+| GET | /`api/categories/{id}` | Hae kategoria ID:llä |
+| PUT | /`api/categories/{id}` | Päivitä kategorian tiedot |
+| POST | /`api/categories` | Luo uusi kategoria |
+| DELETE | /`api/categories/{id}` | Poista kategoria ja sen tuotteet |
 
 ---
 
@@ -593,7 +593,7 @@ Esimerkkivastaus (200 OK):
 
 Palauttaa yksittäisen kategorian ja siihen kuuluvat tuotteet.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -631,7 +631,7 @@ Esimerkkivastaus (200 OK):
 
 Päivittää kategorian nimen ja kuvauksen.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkipyyntö:
 ```json
@@ -657,7 +657,7 @@ Poistaa kategorian. CascadeType.ALL poistaa automaattisesti
 myös kaikki kategorian tuotteet. Todennettu: kategoria id 28
 poistettiin (204), ja sen jälkeen GET palautti 404.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus: (Onnistunut poisto)
 
@@ -669,10 +669,10 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /api/customers | Hae kaikki asiakkaat |
-| GET | /api/customers/{id} | Hae asiakas osoitteineen ja tilauksineen |
-| POST | /api/customers | Luo henkilöasiakas |
-| POST | /api/customers/company | Luo yritysasiakas |
+| GET | /`api/customers` | Hae kaikki asiakkaat |
+| GET | /`api/customers/{id}` | Hae asiakas osoitteineen ja tilauksineen |
+| POST | /`api/customers` | Luo henkilöasiakas |
+| POST | /`api/customers/company` | Luo yritysasiakas |
 
 ---
 
@@ -722,7 +722,7 @@ Esimerkkivastaus (200 OK):
 Palauttaa asiakkaan tiedot, toimitusosoitteen (1:1-assosiaatio)
 ja tilaushistorian tilausriveineen.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -832,12 +832,12 @@ Esimerkkivastaus (200 OK):
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /api/orders | Hae tilaukset sivutettuna |
-| GET | /api/orders/{id} | Hae tilaus tilausriveineen |
-| GET | /api/orders/with-customers | Hae tilaukset JOIN FETCHillä sivutettuna |
-| POST | /api/orders | Luo uusi tilaus |
-| PUT | /api/orders/{id} | Päivitä tilauksen status ja toimituspäivä |
-| DELETE | /api/orders/{id} | Poista tilaus ja sen tilausrivit |
+| GET | /`api/orders` | Hae tilaukset sivutettuna |
+| GET | /`api/orders/{id}` | Hae tilaus tilausriveineen |
+| GET | /`api/orders/with-customers` | Hae tilaukset JOIN FETCHillä sivutettuna |
+| POST | /`api/orders` | Luo uusi tilaus |
+| PUT | /`api/orders/{id}` | Päivitä tilauksen status ja toimituspäivä |
+| DELETE | /`api/orders/{id}` | Poista tilaus ja sen tilausrivit |
 
 
 ---
@@ -892,7 +892,7 @@ tilausriveineen. Hyödyntää N:M-assosiaatiota
 OrderItems-väliitaulun kautta (order_id + product_id
 yhdistelmäavain @EmbeddedId:llä).
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -951,7 +951,7 @@ Päivittää tilauksen statuksen ja/tai toimituspäivän.
 OrderStatusConverter muuntaa statuksen automaattisesti
 isoille kirjaimille.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkipyyntö — päivitä vain status:
 ```json
@@ -995,7 +995,7 @@ Esimerkkivastaus (200 OK):
 Poistaa tilauksen. CascadeType.ALL poistaa automaattisesti
 myös kaikki tilauksen tilausrivit.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus: (Onnistunut poisto)
 
@@ -1007,11 +1007,11 @@ Esimerkkivastaus: (Onnistunut poisto)
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /api/suppliers | Hae kaikki toimittajat |
-| GET | /api/suppliers/{id} | Hae toimittaja osoitteineen ja tuotteineen |
-| POST | /api/suppliers | Luo uusi toimittaja |
-| PUT | /api/suppliers/{id} | Päivitä toimittajan tiedot |
-| DELETE | /api/suppliers/{id} | Poista toimittaja |
+| GET | /`api/suppliers` | Hae kaikki toimittajat |
+| GET | /`api/suppliers/{id}` | Hae toimittaja osoitteineen ja tuotteineen |
+| POST | /`api/suppliers` | Luo uusi toimittaja |
+| PUT | /`api/suppliers/{id}` | Päivitä toimittajan tiedot |
+| DELETE | /`api/suppliers/{id}` | Poista toimittaja |
 
 ---
 
@@ -1056,7 +1056,7 @@ Esimerkkivastaus (200 OK):
 Palauttaa yksittäisen toimittajan yhteystiedot,
 osoitteet ja toimittajan tuotteet.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus (200 OK):
 ```json
@@ -1119,7 +1119,7 @@ Esimerkkivastaus (200 OK):
 
 Päivittää toimittajan tiedot.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkipyyntö:
 ```json
@@ -1148,7 +1148,7 @@ Esimerkkivastaus (200 OK):
 
 Poistaa toimittajan.
 
-Parametrit: id (kokonaisluku, pakollinen)
+Parametrit: `id` (kokonaisluku, pakollinen)
 
 Esimerkkivastaus: (Onnistunut poisto)
 
@@ -1189,7 +1189,6 @@ Esimerkkivastaus (200 OK):
 Palauttaa yksittäisen kontaktin ID:n perusteella.
 
 Parametrit: `id` (kokonaisluku, pakollinen)
-
 
 Esimerkkivastaus (200 OK):
 
