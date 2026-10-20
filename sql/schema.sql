@@ -1,92 +1,126 @@
-DROP TABLE IF EXISTS OrderItems;
-DROP TABLE IF EXISTS Orders;
-DROP TABLE IF EXISTS Products;
-DROP TABLE IF EXISTS ProductCategories;
-DROP TABLE IF EXISTS SupplierAddresses;
-DROP TABLE IF EXISTS CustomerAddresses;
-DROP TABLE IF EXISTS Suppliers;
-DROP TABLE IF EXISTS Customers;
+-- ============================================================
+-- WEBSTORE — TIETOKANTALAAJENNUKSET
+-- Kurssilla toteutetut rakenteet schema_populated_dump.sql:n päälle
+-- Suorita tämä schema_populated_dump.sql:n jälkeen
+-- ============================================================
 
-CREATE TABLE Customers (
+
+-- ============================================================
+-- INDEKSIT (Tehtävä 2)
+-- ============================================================
+
+-- Tuotehaku nimellä — yleisin hakutapaus API:ssa
+CREATE INDEX idx_name ON Products(name);
+
+-- Hintahaarukkahaut — käytetty /api/products/search-päätepisteessä
+CREATE INDEX idx_price ON Products(price);
+
+-- Kattava indeksi (covering index) — price+name-haut ilman tauluhakua
+CREATE INDEX idx_price_name ON Products(price, name);
+
+-- Asiakkaiden suodatus maan perusteella
+CREATE INDEX idx_customeraddress_country ON CustomerAddresses(country);
+
+
+-- ============================================================
+-- NÄKYMÄT (Tehtävä 6)
+-- ============================================================
+
+-- Tuotteet kategoriatietoineen — välttää toistuvan JOIN-kirjoittamisen
+-- Päivitettävissä suoraan (yksinkertainen kahden taulun liitos)
+CREATE VIEW ProductDetails AS
+SELECT Products.name AS product_name,
+       Products.price,
+       Products.stock_quantity,
+       ProductCategories.name AS category_name
+FROM Products
+INNER JOIN ProductCategories ON Products.category_id = ProductCategories.id;
+
+-- Tuotemäärät kategorioittain — koostenäkymä
+-- EI päivitettävissä suoraan (sisältää GROUP BY)
+CREATE VIEW CategoryProductCount AS
+SELECT ProductCategories.name AS category_name,
+       COUNT(*) AS product_count
+FROM Products
+INNER JOIN ProductCategories ON Products.category_id = ProductCategories.id
+GROUP BY ProductCategories.name;
+
+
+-- ============================================================
+-- LOKITAULU JA LIIPAISIN (Tehtävä 7)
+-- ============================================================
+
+-- Lokitaulu varastosaldon muutoshistorialle
+CREATE TABLE ProductStockLog (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    phone VARCHAR(30)
-);
-
-CREATE TABLE Suppliers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(100),
-    phone VARCHAR(30),
-    email VARCHAR(255)
-);
-
-CREATE TABLE CustomerAddresses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL,
-    street_address VARCHAR(255) NOT NULL,
-    postal_code VARCHAR(20),
-    city VARCHAR(100) NOT NULL,
-    country VARCHAR(100),
-    CONSTRAINT fk_customeraddress_customer
-    FOREIGN KEY (customer_id) REFERENCES Customers(id)
-);
-
--- SupplierAddresses
-CREATE TABLE SupplierAddresses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    supplier_id INT NOT NULL,
-    street_address VARCHAR(255) NOT NULL,
-    postal_code VARCHAR(20),
-    city VARCHAR(100) NOT NULL,
-    country VARCHAR(100),
-    CONSTRAINT fk_supplieraddress_supplier
-    FOREIGN KEY (supplier_id) REFERENCES Suppliers(id)
-);
-
-CREATE TABLE ProductCategories (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT
-);
-
-CREATE TABLE Products (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    stock_quantity INT NOT NULL DEFAULT 0,
-    category_id INT,
-    supplier_id INT,
-    CONSTRAINT fk_product_category
-        FOREIGN KEY (category_id) REFERENCES ProductCategories(id),
-    CONSTRAINT fk_product_supplier
-        FOREIGN KEY (supplier_id) REFERENCES Suppliers(id)
-);
-
-CREATE TABLE Orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL,
-    order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    delivery_date DATETIME,
-    shipping_address_id INT,
-    status VARCHAR(50) DEFAULT 'NEW',
-    CONSTRAINT fk_order_customer
-        FOREIGN KEY (customer_id) REFERENCES Customers(id),
-    CONSTRAINT fk_order_shipping_address
-        FOREIGN KEY (shipping_address_id) REFERENCES CustomerAddresses(id)
-
-
-CREATE TABLE OrderItems (
-    order_id INT NOT NULL,
     product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    PRIMARY KEY (order_id, product_id),
-    CONSTRAINT fk_orderitem_order
-        FOREIGN KEY (order_id) REFERENCES Orders(id),
-    CONSTRAINT fk_orderitem_product
+    old_quantity INT NOT NULL,
+    new_quantity INT NOT NULL,
+    changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stocklog_product
         FOREIGN KEY (product_id) REFERENCES Products(id)
 );
+
+-- Liipaisin: kirjaa jokaisen varastosaldon muutoksen lokiin automaattisesti
+-- Laukeaa AFTER UPDATE — kirjaa vanhan ja uuden arvon
+DELIMITER //
+CREATE TRIGGER trg_products_stock_change
+AFTER UPDATE ON Products
+FOR EACH ROW
+BEGIN
+    INSERT INTO ProductStockLog (product_id, old_quantity, new_quantity)
+    VALUES (NEW.id, OLD.stock_quantity, NEW.stock_quantity);
+END //
+DELIMITER ;
+
+
+-- ============================================================
+-- AJASTETTU TAPAHTUMA (Tehtävä 7)
+-- ============================================================
+
+-- Vaaditaan ennen CREATE EVENT -lausetta
+SET GLOBAL event_scheduler = ON;
+
+-- Merkitsee maksamattomat NEW-tilaukset automaattisesti EXPIRED-tilaan
+-- Tarkistaa minuutin välein onko yli 2 minuuttia vanhoja NEW-tilauksia
+-- Tuotannossa aikaväli olisi esim. 30 minuuttia
+DELIMITER //
+CREATE EVENT ev_expire_old_orders
+ON SCHEDULE EVERY 1 MINUTE
+DO
+BEGIN
+    UPDATE Orders
+    SET status = 'EXPIRED'
+    WHERE status = 'NEW'
+      AND order_date < NOW() - INTERVAL 2 MINUTE;
+END //
+DELIMITER ;
+
+
+-- ============================================================
+-- TEMPORAALIOMINAISUUDET (Tehtävä 9)
+-- ============================================================
+
+-- System versioning tallentaa automaattisesti koko muutoshistorian
+-- Mahdollistaa hintamuutosten jäljityksen ja virheellisten päivitysten palautuksen
+ALTER TABLE Products ADD SYSTEM VERSIONING;
+
+
+-- ============================================================
+-- OPTIMISTINEN LUKITUS (Tehtävä 14)
+-- ============================================================
+
+-- version-sarake JPA:n @Version-annotaatiota varten
+-- Kasvaa automaattisesti jokaisessa Hibernate-päivityksessä
+-- system_versioning_alter_history vaatii KEEP-tilan koska Products käyttää system versioning -ominaisuutta
+SET SESSION system_versioning_alter_history = 'KEEP';
+ALTER TABLE Products ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
+SET SESSION system_versioning_alter_history = 'ERROR';
+
+
+-- ============================================================
+-- SKEEMAMUUTOS ESIMERKKI (Tehtävä 8)
+-- ============================================================
+
+-- Esimerkki hallitusta skeemamuutoksesta — uuden sarakkeen lisääminen
+ALTER TABLE Products ADD COLUMN discount_percentage DECIMAL(5,2) DEFAULT 0;
