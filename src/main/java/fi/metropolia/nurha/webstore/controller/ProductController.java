@@ -1,6 +1,7 @@
 package fi.metropolia.nurha.webstore.controller;
 
 
+import fi.metropolia.nurha.webstore.dto.ProductDTO;
 import fi.metropolia.nurha.webstore.entity.Product;
 import fi.metropolia.nurha.webstore.repository.ProductRepository;
 import fi.metropolia.nurha.webstore.service.ProductService;
@@ -16,84 +17,89 @@ import java.util.List;
 public class ProductController {
 
     private final ProductRepository productRepository;
-
     private final ProductService productService;
 
-    public ProductController(ProductRepository productRepository, ProductService productService) {
+    public ProductController(ProductRepository productRepository,
+                             ProductService productService) {
         this.productRepository = productRepository;
         this.productService = productService;
     }
 
-    // GET /api/products
+    // GET /api/products — palauttaa DTO:n jossa näkyy kategoria
     @GetMapping
-    public List<Product> getAll() {
-        return productRepository.findAll();
+    public List<ProductDTO> getAll() {
+        return productRepository.findAll()
+                .stream()
+                .map(ProductDTO::new)  // muunnetaan jokainen Product → ProductDTO
+                .toList();
     }
 
+    // GET /api/products/{id} — palauttaa DTO:n
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getById(@PathVariable Integer id) {
+    public ResponseEntity<ProductDTO> getById(@PathVariable Integer id) {
         return productRepository.findById(id)
+                .map(ProductDTO::new)  // Product → ProductDTO
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // POST /api/products — pyyntö tulee entiteettinä, vastaus DTO:na
     @PostMapping
-    public Product create(@RequestBody Product product) {
-        return productRepository.save(product);
+    public ProductDTO create(@RequestBody Product product) {
+        return new ProductDTO(productRepository.save(product));
     }
 
-
+    // PUT /api/products/{id} - päivittää tuotteen, jos löytyy, palauttaa DTO:n
     @PutMapping("/{id}")
-    public ResponseEntity<Product> update(@PathVariable Integer id, @RequestBody Product updated) {
+    public ResponseEntity<ProductDTO> update(
+            @PathVariable Integer id,
+            @RequestBody Product updated) {
         return productRepository.findById(id)
                 .map(product -> {
                     product.setName(updated.getName());
                     product.setDescription(updated.getDescription());
                     product.setPrice(updated.getPrice());
                     product.setStockQuantity(updated.getStockQuantity());
-                    return ResponseEntity.ok(productRepository.save(product));
+                    return ResponseEntity.ok(
+                            new ProductDTO(productRepository.save(product)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // DELETE /api/products/{id} - poistaa tuotteen, jos löytyy
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
         if (!productRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        // Tarkistetaan, onko tuotetta käytetty tilausriveillä
-        if (productRepository.countOrderItemsByProductId(id) > 0) {
-            return ResponseEntity.status(409)
-                    .body("Product cannot be deleted because it is used in orders.");
-        }
-
         productRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
-    // Criteria API: dynaaminen haku
-    // Kaikki parametrit ovat valinnaisia
-    // GET /api/products/search?minPrice=10&maxPrice=100&categoryId=1
+    // GET /api/products/search — Criteria API, palauttaa DTO:n
     @GetMapping("/search")
-    public List<Product> search(
+    public List<ProductDTO> search(
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) Integer categoryId) {
-        return productService.searchProducts(minPrice, maxPrice, categoryId);
+        return productService.searchProducts(minPrice, maxPrice, categoryId)
+                .stream()
+                .map(ProductDTO::new)
+                .toList();
     }
 
-    // JPQL: massapäivitys - nosta kaikkien kategorian tuotteiden hintaa
-    // PUT /api/products/price-update?categoryId=1&multiplier=1.1
+    // PUT /api/products/price-update - päivittää hintaa kertoimella kaikille tuotteille tietyssä kategoriassa
     @PutMapping("/price-update")
     @Transactional
     public ResponseEntity<String> updatePrices(
             @RequestParam Integer categoryId,
             @RequestParam BigDecimal multiplier) {
-        int updated = productRepository.updatePricesByCategory(multiplier, categoryId);
+        int updated = productRepository.updatePricesByCategory(
+                multiplier, categoryId);
         return ResponseEntity.ok("Updated " + updated + " products");
     }
 
-    // Osto-operaatio: vähennä varastosaldoa, Optimistinen lukitus estää yliostamisen
+    // PUT /api/products/{id}/purchase - vähentää varastomäärää, tarkistaa että varastoa on tarpeeksi
     @PutMapping("/{id}/purchase")
     public ResponseEntity<String> purchase(
             @PathVariable Integer id,
@@ -106,9 +112,6 @@ public class ProductController {
                                     .body("Not enough stock. Available: "
                                             + product.getStockQuantity());
                         }
-                        // Vähennetään varastoa
-                        // Jos toinen transaktio on muuttanut tätä tuotetta
-                        // samanaikaisesti → OptimisticLockException
                         product.setStockQuantity(
                                 product.getStockQuantity() - quantity);
                         productRepository.save(product);
@@ -117,12 +120,9 @@ public class ProductController {
                                         + product.getStockQuantity());
                     })
                     .orElse(ResponseEntity.notFound().build());
-
         } catch (Exception e) {
-            // OptimisticLockException: toinen transaktio muutti dataa samanaikaisesti
             return ResponseEntity.status(409)
                     .body("Concurrent update detected. Please try again.");
         }
     }
-
 }

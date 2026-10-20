@@ -1,8 +1,10 @@
 package fi.metropolia.nurha.webstore.controller;
 
+import fi.metropolia.nurha.webstore.dto.CreateOrderRequest;
 import fi.metropolia.nurha.webstore.entity.Order;
 import fi.metropolia.nurha.webstore.repository.CustomerRepository;
 import fi.metropolia.nurha.webstore.repository.OrderRepository;
+import fi.metropolia.nurha.webstore.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -15,13 +17,16 @@ public class OrderController {
 
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
+    private final OrderService orderService;
 
     public OrderController(OrderRepository orderRepository,
-                           CustomerRepository customerRepository) {
+                           CustomerRepository customerRepository, OrderService orderService) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
+        this.orderService = orderService;
     }
 
+    // GET /api/orders — lista, vain perustiedot
     @GetMapping
     public Page<Order> getAll(
             @RequestParam(defaultValue = "0") int page,
@@ -29,6 +34,7 @@ public class OrderController {
         return orderRepository.findAll(PageRequest.of(page, size));
     }
 
+    // GET /api/orders/with-customers — lista, mukana asiakastiedot
     @GetMapping("/with-customers")
     public Page<Order> getAllWithCustomers(
             @RequestParam(defaultValue = "0") int page,
@@ -36,6 +42,7 @@ public class OrderController {
         return orderRepository.findAllWithCustomer(PageRequest.of(page, size));
     }
 
+    // GET /api/orders/{id} - haetaan yksi tilaus id:n perusteella
     @GetMapping("/{id}")
     public ResponseEntity<Order> getById(@PathVariable Integer id) {
         return orderRepository.findById(id)
@@ -44,8 +51,6 @@ public class OrderController {
     }
 
     // POST — luo uusi tilaus
-    // Testaa muunninta (status pienillä → tallennetaan isoilla)
-    // Testaa @PrePersist (orderDate asetetaan automaattisesti)
     @PostMapping
     public ResponseEntity<Order> create(@RequestBody Order order) {
         // Haetaan asiakas id:n perusteella
@@ -60,6 +65,20 @@ public class OrderController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    // Luo tilauksen, tilausrivit ja päivittää varastosaldot atomisesti
+    @PostMapping("/complete")
+    public ResponseEntity<?> createComplete(
+            @RequestBody CreateOrderRequest request) {
+        try {
+            Order order = orderService.createOrder(request);
+            return ResponseEntity.ok(order);
+        } catch (RuntimeException e) {
+            // Transaktio on jo peruutettu automaattisesti
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 
     // PUT /api/orders/{id} — päivitä tilauksen status ja toimituspäivä
     @PutMapping("/{id}")

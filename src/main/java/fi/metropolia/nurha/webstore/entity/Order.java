@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -44,7 +45,7 @@ public class Order {
     // 1:M - yhdellä tilauksella voi olla useita tilausrivejä (OrderItem)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @JsonManagedReference("order-items")
-    private List<OrderItem> orderItems;
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     // JPA kutsuu tätä automaattisesti ENNEN kuin tilaus tallennetaan
     // Varmistaa, että orderDate on asetettu ja status on oletuksena "NEW"

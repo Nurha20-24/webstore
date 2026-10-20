@@ -1,5 +1,8 @@
 package fi.metropolia.nurha.webstore.controller;
 
+import fi.metropolia.nurha.webstore.dto.ProductDTO;
+import fi.metropolia.nurha.webstore.dto.SupplierDetailDTO;
+import fi.metropolia.nurha.webstore.dto.SupplierSummaryDTO;
 import fi.metropolia.nurha.webstore.entity.Supplier;
 import fi.metropolia.nurha.webstore.repository.SupplierRepository;
 import org.springframework.http.ResponseEntity;
@@ -17,29 +20,48 @@ public class SupplierController {
         this.supplierRepository = supplierRepository;
     }
 
-    // Hae kaikki toimittajat osoitteineen ja tuotteineen
+    // GET /api/suppliers — lista, vain perustiedot
     @GetMapping
-    public List<Supplier> getAll() {
-        return supplierRepository.findAll();
+    public List<SupplierSummaryDTO> getAll() {
+        return supplierRepository.findAll()
+                .stream()
+                .map(SupplierSummaryDTO::new)
+                .toList();
     }
 
-    // Hae yksittäinen toimittaja id:n perusteella
+    // GET /api/suppliers/{id} — perustiedot + osoite + tuotemäärä
     @GetMapping("/{id}")
-    public ResponseEntity<Supplier> getById(@PathVariable Integer id) {
+    public ResponseEntity<SupplierDetailDTO> getById(@PathVariable Integer id) {
         return supplierRepository.findById(id)
+                .map(SupplierDetailDTO::new)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Luo uusi toimittaja
-    @PostMapping
-    public Supplier create(@RequestBody Supplier supplier) {
-        return supplierRepository.save(supplier);
+    // GET /api/suppliers/{id}/products — toimittajan kaikki tuotteet
+    // Erillinen päätepiste kun nimenomaan halutaan tuotelista
+    @GetMapping("/{id}/products")
+    public ResponseEntity<List<ProductDTO>> getProducts(@PathVariable Integer id) {
+        return supplierRepository.findById(id)
+                .map(supplier -> {
+                    List<ProductDTO> products = supplier.getProducts()
+                            .stream()
+                            .map(ProductDTO::new)
+                            .toList();
+                    return ResponseEntity.ok(products);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // Päivitä olemassa oleva toimittaja
+    // POST /api/suppliers - luo uusi toimittaja
+    @PostMapping
+    public SupplierSummaryDTO create(@RequestBody Supplier supplier) {
+        return new SupplierSummaryDTO(supplierRepository.save(supplier));
+    }
+
+    // PUT /api/suppliers/{id} - päivittää olemassa olevan toimittajan tiedot
     @PutMapping("/{id}")
-    public ResponseEntity<Supplier> update(
+    public ResponseEntity<SupplierSummaryDTO> update(
             @PathVariable Integer id,
             @RequestBody Supplier updated) {
         return supplierRepository.findById(id)
@@ -48,12 +70,13 @@ public class SupplierController {
                     supplier.setContactName(updated.getContactName());
                     supplier.setPhone(updated.getPhone());
                     supplier.setEmail(updated.getEmail());
-                    return ResponseEntity.ok(supplierRepository.save(supplier));
+                    return ResponseEntity.ok(
+                            new SupplierSummaryDTO(supplierRepository.save(supplier)));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Poista toimittaja
+    // DELETE /api/suppliers/{id} - poistaa toimittajan
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         if (!supplierRepository.existsById(id)) {
@@ -62,5 +85,4 @@ public class SupplierController {
         supplierRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-
 }

@@ -87,6 +87,8 @@ Content-Type: application/json
 
 
 
+### Hae kaikki asiakkaat
+GET http://localhost:8080/api/customers
 
 ### 3. 1:1 — hae asiakas osoitteineen
 GET http://localhost:8080/api/customers/6
@@ -104,10 +106,7 @@ Content-Type: application/json
 }
 
 ### 5. Varmistus että yritysasiakas tallentui oikein
-GET http://localhost:8080/api/customers/100001
-
-### Hae kaikki asiakkaat
-GET http://localhost:8080/api/customers
+GET http://localhost:8080/api/customers/100
 
 ### Luo henkilöasiakas
 POST http://localhost:8080/api/customers
@@ -119,6 +118,20 @@ Content-Type: application/json
   "email": "testi@example.fi",
   "phone": "040-1111111"
 }
+
+### Customers PUT
+PUT http://localhost:8080/api/customers/100003
+Content-Type: application/json
+
+{
+  "first_name": "Päivitetty",
+  "last_name": "Käyttäjä",
+  "email": "paivitetty@example.fi",
+  "phone": "040-9999999"
+}
+
+### Customers DELETE
+DELETE http://localhost:8080/api/customers/100002
 
 
 
@@ -196,6 +209,40 @@ Content-Type: application/json
 }
 
 
+### Luo täydellinen tilaus transaktiolla
+POST http://localhost:8080/api/orders/complete
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "items": [
+    { "productId": 10, "quantity": 2 },
+    { "productId": 20, "quantity": 1 }
+  ]
+}
+
+### Testaa virhetilanne — liian suuri määrä
+POST http://localhost:8080/api/orders/complete
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "items": [
+    { "productId": 10, "quantity": 99999 }
+  ]
+}
+
+### Testaa virhetilanne — tuotetta ei ole
+POST http://localhost:8080/api/orders/complete
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "items": [
+    { "productId": 99999, "quantity": 1 }
+  ]
+}
+
 
 
 
@@ -205,6 +252,9 @@ GET http://localhost:8080/api/suppliers/7
 
 ### Hae kaikki toimittajat
 GET http://localhost:8080/api/suppliers
+
+### Toimittajan kaikki tuotteet
+GET http://localhost:8080/api/suppliers/7/products
 
 ### Luo uusi toimittaja
 POST http://localhost:8080/api/suppliers
