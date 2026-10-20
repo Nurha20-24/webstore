@@ -209,8 +209,7 @@ kaikki muutokset automaattisesti. Testattu kahdella
 virhetilanteella: tuotetta ei löydy ja varasto ei riitä —
 molemmissa tilauksesta ei jäänyt jälkiä tietokantaan.
 
-SQL-esimerkit: sql/queries.sql 
-Spring Boot -toteutus: OrderService.java
+SQL-esimerkit: sql/queries.sql
 
 ---
 
