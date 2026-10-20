@@ -17,6 +17,7 @@ kautta voidaan lukea, lisätä, muokata ja poistaa tietoja tietokannasta.
 
 1. [Teknologiat](#teknologiat)
 2. [Aloitus](#aloitus)
+3. [Testaus](#testaus)
 3. [Tietokannan ominaisuudet](#tietokannan-ominaisuudet)
 4. [Sovelluksen tietokantaratkaisut](#sovelluksen-tietokantaratkaisut)
 5. [API-päätepisteet](#api-päätepisteet)
@@ -83,6 +84,51 @@ Käynnistä sovellus komennolla:
     mvn clean spring-boot:run
 
 Sovellus käynnistyy osoitteeseen http://localhost:8080
+
+---
+
+## TESTAUS
+
+Projektin toiminta on todennettu kahdella tavalla 
+HTTP-testauksella ja yksikkötesteillä.
+
+### API-testaus
+
+Kaikki API-päätepisteet on testattu käytännössä IntelliJ IDEA:n
+sisäänrakennetulla HTTP-clientilla. Testit ja niiden vastaukset
+löytyvät tiedostosta `test/test.http`. Tiedosto sisältää valmiit
+HTTP-pyynnöt jokaiselle päätepisteelle, mukaan lukien onnistuneet
+kutsut ja virhetilanteet (esim. riittämätön varasto, olematon
+resurssi).
+
+Testatut tilanteet kattavat muun muassa:
+- Kaikki CRUD-operaatiot jokaiselle resurssille
+- Criteria API -haut eri parametriyhdistelmillä
+- JPQL-massapäivitykset
+- Optimistisen lukituksen toiminta (version-kentän kasvu)
+- Transaktion rollback virhetilanteissa
+- Sivutus suurilla tietomäärillä
+
+### JUnit testit
+
+Projektiin on toteutettu JUnit-testejä kriittisimmille
+komponenteille: tilauksen luonnin transaktiolle, Criteria API
+-haulle ja OrderStatusConverter-muuntimelle. Testit löytyvät
+`src/test/java`-kansiosta.
+
+Testit kattavat sekä onnistuneet tilanteet että virhetilanteet,
+kuten transaktion rollbackin ja kun varasto ei riitä tai tuotetta
+ei löydy. Testeissä käytetään H2-muistitietokantaa erillään
+MariaDB-tuotantotietokannasta.
+
+Testit ajetaan komennolla:
+
+    mvn test
+
+Tulos:
+
+    Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+    BUILD SUCCESS
 
 ---
 
@@ -402,9 +448,17 @@ DTO määrää tarkasti mitä tietoja palautetaan ja estää tietokantakenttien 
 
 Perusosoite: [http://localhost:8080/api](http://localhost:8080/api)
 
-Kaikki vastaukset ovat JSON-muodossa. 
-Virhetilanteissa palautetaan HTTP-statuskoodi 400 (virheellinen pyyntö) tai 404 (resurssia ei löydy). 
-Onnistuneet poisto-operaatiot palauttavat statuskoodin 204 (ei sisältöä).
+Kaikki vastaukset ovat JSON-muodossa (paitsi tekstivastaukset
+massapäivitys- ja osto-operaatioissa).
+
+| Statuskoodi | Tarkoitus |
+|-------------|-----------|
+| 200 OK | Onnistunut GET, POST tai PUT |
+| 204 No Content | Onnistunut DELETE |
+| 400 Bad Request | Virheellinen pyyntö (esim. varasto ei riitä) |
+| 404 Not Found | Resurssia ei löydy |
+
+---
 
 API-päätepisteet on ryhmitelty resurssin mukaan. 
 Alla on kuvattu kunkin resurssin käytettävissä olevat operaatiot, 
@@ -423,7 +477,7 @@ niiden tarkoitus sekä pyyntöjen ja vastausten rakenteet.
 
 | Metodi | Päätepiste | Kuvaus |
 |--------|------------|--------|
-| GET | /`api/products` | Hae kaikki tuotteet |
+| GET | `/api/products` | Hae kaikki tuotteet |
 | GET | `/api/products/{id}` | Hae tuote ID:llä |
 | GET | `/api/products/search` | Dynaaminen haku parametreilla |
 | POST | `/api/products` | Luo uusi tuote |
