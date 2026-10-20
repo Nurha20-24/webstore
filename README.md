@@ -144,18 +144,20 @@ järjestelmän toimintaa ja luotettavuutta.
 
 Tietokanta koostuu kahdeksasta päätaulusta:
 
-| Taulu | Tarkoitus |
-|-------|-----------|
-| Customers | Asiakkaiden perustiedot |
-| CustomerAddresses | Asiakkaiden toimitusosoitteet (1:1 asiakkaaseen) |
-| Suppliers | Tavarantoimittajat |
-| SupplierAddresses | Toimittajien osoitteet (1:M toimittajaan) |
-| ProductCategories | Tuotekategoriat |
-| Products | Tuotteet kategoria- ja toimittajaviittauksineen |
-| Orders | Tilaukset asiakasviittauksineen |
+| Taulu | Tarkoitus                                                    |
+|-------|--------------------------------------------------------------|
+| Customers | Asiakkaiden perustiedot                                      |
+| CustomerAddresses | Asiakkaiden toimitusosoitteet (1:1 asiakkaaseen)             |
+| Suppliers | Tavarantoimittajat                                           |
+| SupplierAddresses | Toimittajien osoitteet (1:M toimittajaan)                    |
+| ProductCategories | Tuotekategoriat                                              |
+| Products | Tuotteet kategoria- ja toimittajaviittauksineen              |
+| Orders | Tilaukset asiakasviittauksineen                              |
 | OrderItems | Tilausrivit — N:M-väliitaulu tilausten ja tuotteiden välillä |
 
-Lisäksi tietokannassa on lokitaulu ProductStockLog joka tallentaa
+
+Lisäksi tietokannassa on Contacts-taulu yhteystietojen tallentamiseen sekä 
+lokitaulu ProductStockLog joka tallentaa
 varastosaldon muutoshistorian automaattisesti liipaisimet avulla.
 
 ---
@@ -207,8 +209,9 @@ kaikki muutokset automaattisesti. Testattu kahdella
 virhetilanteella: tuotetta ei löydy ja varasto ei riitä —
 molemmissa tilauksesta ei jäänyt jälkiä tietokantaan.
 
-SQL-esimerkit: sql/queries.sql
+SQL-esimerkit: sql/queries.sql 
 Spring Boot -toteutus: OrderService.java
+
 ---
 
 ### Rinnakkaiskäyttö ja lukitus
