@@ -1,15 +1,23 @@
 # Webstore — Tietokanta ja REST API
 
-Tämä repositorio sisältää Tietokantaratkaisut-kurssilla toteutetun
-tietokanta- ja REST API -projektin. Projektissa rakennettiin
-tietokanta ja backend-palvelu kuvitteelliselle verkkokaupalle
-käyttäen MariaDB-tietokannanhallintajärjestelmää ja Spring Boot
--ohjelmistokehystä.
+Tämä repositorio sisältää Tietokantaratkaisut-kurssilla toteutetun 
+tietokanta- ja REST API -projektin. Projektissa rakennettiin kuvitteelliselle
+verkkokaupalle relaatiotietokanta ja Spring Boot -pohjainen REST API -taustapalvelu. 
+Tietokannan hallintajärjestelmänä käytetään MariaDB:tä.
 
-REST API -taustapalvelu on tarkoitettu verkkokaupan työntekijöiden
-ja ylläpitäjien käyttöön. Se tarjoaa työkalut tuotteiden, tilausten,
-asiakkaiden, kategorioiden ja toimittajien hallintaan. Palvelun
-kautta voidaan lukea, lisätä, muokata ja poistaa tietoja tietokannasta.
+REST API on tarkoitettu verkkokaupan työntekijöiden ja ylläpitäjien käyttöön. 
+Se tarjoaa rajapinnat tuotteiden, kategorioiden, asiakkaiden, tilausten, 
+toimittajien ja kontaktien hallintaan.
+API tukee keskeisiä CRUD-toimintoja sekä täydentäviä toiminnallisuuksia, 
+kuten dynaamista tuotehakua, sivutusta, massapäivityksiä ja tilausten käsittelyä.
+
+Tietokantaratkaisussa hyödynnetään kurssilla käsiteltyjä ominaisuuksia, 
+kuten indeksejä, näkymiä, liipaisimia, transaktioita, optimistista lukitusta 
+ja temporaalista tietojen versiointia. Lisäksi toteutuksessa on huomioitu 
+tietokannan käyttöoikeudet, kyselyjen suorituskyky ja virhetilanteiden hallinta.
+
+README-dokumentaatio kuvaa projektin käyttöönoton, testauksen, tietokantaratkaisut 
+ja API-päätepisteet esimerkkipyyntöineen ja -vastauksineen.
 
 ---
 
@@ -89,7 +97,7 @@ Sovellus käynnistyy osoitteeseen http://localhost:8080
 
 ## TESTAUS
 
-Projektin toiminta on todennettu kahdella tavalla 
+Projektin toiminta on testattu kahdella tavalla 
 HTTP-testauksella ja yksikkötesteillä.
 
 ### API-testaus
@@ -193,8 +201,7 @@ epäonnistuttava kokonaan.
 
 Tietokantatasolla (sql/queries.sql) testattiin transaktioita
 SQL:llä — sekä onnistunut tilaus että tahallisesti aiheutettu
-virhetilanne ROLLBACKilla. Todennettiin että puolittaisia
-muutoksia ei jää tietokantaan.
+virhetilanne ROLLBACKilla.
 
 Spring Boot -tasolla transaktio on toteutettu
 `POST /api/orders/complete` -päätepisteessä
@@ -218,10 +225,8 @@ SQL-esimerkit: sql/queries.sql
 Tutkittiin kolmea lukitusstrategiaa:
 
 **Automaattinen rivilukitus** — InnoDB lukitsee rivin
-automaattisesti UPDATE-operaation ajaksi. Tämä riittää
-tilanteissa joissa päivitys tehdään relatiivisesti
-(stock_quantity - N), koska tietokanta laskee uuden arvon
-itse eikä sovellus lue arvoa ensin.
+automaattisesti UPDATE-operaation ajaksi. automaattinen 
+rivilukitus riittää useimpiin tilanteisiin tässä projektissa.
 
 **Eksplisiittinen lukko (SELECT ... FOR UPDATE)** — lukitsee
 rivin jo lukemisvaiheessa. Toinen istunto jää odottamaan
@@ -230,18 +235,14 @@ arvon, laskee uuden arvon itse ja tallentaa sen takaisin
 — ilman lukkoa toinen transaktio voisi muuttaa arvon välissä.
 
 **Optimistinen lukitus (@Version)** — toteutettu
-Products-entiteettiin. Tietokantaan lisättiin version-sarake
+Products-entiteettiin koska varastosaldo on kriittinen kenttä
+johon kohdistuu samanaikaisia päivityksiä. Tietokantaan lisättiin version-sarake
 joka kasvaa automaattisesti jokaisen päivityksen yhteydessä.
 Hibernate lisää versionumeron WHERE-lauseeseen jokaisessa
 UPDATE-operaatiossa. Jos versio on muuttunut, Hibernate
 heittää OptimisticLockException-poikkeuksen. Tämä estää
 Lost Update -ongelman tilanteissa joissa kaksi asiakasta
 ostaa samaa tuotetta samanaikaisesti.
-
-Johtopäätös: automaattinen rivilukitus riittää useimpiin
-tilanteisiin tässä projektissa. Optimistinen lukitus lisättiin
-Products-tauluun koska varastosaldo on kriittinen kenttä
-johon kohdistuu samanaikaisia päivityksiä.
 
 ---
 
@@ -302,15 +303,14 @@ Products-taulu käyttää MariaDB:n system versioning
 koko muutoshistorian — hinnan ja varastosaldon muutokset
 jäävät pysyvästi talteen ilman erillistä lokitaulua.
 
-Historiallinen tieto haetaan FOR SYSTEM_TIME -syntaksilla
-joka on MariaDB:n erityisominaisuus. Voidaan hakea koko
+Historiallinen tieto haetaan FOR SYSTEM_TIME -syntaksilla. Voidaan hakea koko
 historia, tila tiettynä ajankohtana tai tietyllä aikavälillä
 tapahtuneet muutokset.
 
 Käyttötapaukset: hintamuutosten jäljitys, virheellisen
 päivityksen palauttaminen ja varastosaldon kehityksen seuranta.
 
-Huomio: system versioning aiheutti rajoituksen tehtävässä 14.
+system versioning aiheutti rajoituksen tehtävässä 14.
 Optimistisen lukituksen version-sarakkeen lisääminen edellytti
 system_versioning_alter_history-asetuksen muuttamista KEEP-tilaan
 ALTER TABLE -operaation ajaksi.
